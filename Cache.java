@@ -20,8 +20,8 @@ public class Cache {
     private int replacementPolicy;
     private int inclusionProperty;
     private int setCount;
-    private int READ = 0;
-    private int WRITE = 0;
+    private int readCount = 0;
+    private int writeCount = 0;
     private int readMissCount = 0;
     private int writeMissCount = 0;
     private int writeBackCount = 0;
@@ -33,13 +33,14 @@ public class Cache {
     int pLRU[][];
 
 
-    public Cache(int blockSize, int size, int associativity, int replacementPolicy, int inclusionProperty, String traceFile) {
+    public Cache(int blockSize, int size, int associativity, int replacementPolicy, int inclusionProperty, String traceFile, CacheType type) {
 
         this.blockSize = blockSize;
         this.size = size;
         this.associativity = associativity;
         this.replacementPolicy = replacementPolicy;
         this.inclusionProperty = inclusionProperty;
+        this.type = type;
         /**
          * Computing number of sets/cache
          * */
@@ -140,20 +141,20 @@ public class Cache {
         this.setCount = setCount;
     }
 
-    public int getREAD() {
-        return READ;
+    public int getReadCount() {
+        return readCount;
     }
 
-    public void setREAD(int READ) {
-        this.READ = READ;
+    public void setReadCount(int readCount) {
+        this.readCount = readCount;
     }
 
-    public int getWRITE() {
-        return WRITE;
+    public int getWriteCount() {
+        return writeCount;
     }
 
-    public void setWRITE(int WRITE) {
-        this.WRITE = WRITE;
+    public void setWriteCount(int writeCount) {
+        this.writeCount = writeCount;
     }
 
     public int getReadMissCount() {
@@ -230,8 +231,8 @@ public class Cache {
                 .add("replacementPolicy=" + replacementPolicy)
                 .add("inclusionProperty=" + inclusionProperty)
                 .add("setCount=" + setCount)
-                .add("READ=" + READ)
-                .add("WRITE=" + WRITE)
+                .add("READ=" + readCount)
+                .add("WRITE=" + writeCount)
                 .add("readMissCount=" + readMissCount)
                 .add("writeMissCount=" + writeMissCount)
                 .add("writeBackCount=" + writeBackCount)

@@ -7,6 +7,7 @@ public class CacheBlock {
     private String data, tag;
     private int lastAccess;
     private int OPTCounter = 0;
+    private Boolean dirty = true;
 
     public CacheBlock(String data, String tag, int lastAccess, Boolean dirty) {
         super();
@@ -21,7 +22,6 @@ public class CacheBlock {
     public void setTag(String tag) {
         this.tag = tag;
     }
-    Boolean dirty = true;
 
     public String getData() {
         return data;
@@ -35,7 +35,7 @@ public class CacheBlock {
     public void setLastAccess(int lastAccess) {
         this.lastAccess = lastAccess;
     }
-    public Boolean getDirty() {
+    public Boolean isDirty() {
         return dirty;
     }
     public void setDirty(Boolean dirty) {

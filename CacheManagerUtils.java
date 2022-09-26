@@ -1,4 +1,5 @@
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -66,6 +67,26 @@ public class CacheManagerUtils {
         }
 
         return binary;
+    }
 
+    public static void printCacheState(Cache cache){
+        System.out.println("===== "+cache.getType().name()+" contents =====");
+
+        for(int i = 0; i < cache.getSetCount(); i++)
+        {
+            System.out.print("Set	"+i+": ");
+            List<CacheBlock> row = cache.getCache().get(i);
+
+            for(int j = 0; j <row.size() ; j++) {
+                System.out.print(toHex(row.get(j).getTag())+" "+(row.get(j).isDirty()?"D":"")+"	");
+            }
+            System.out.println();
+        }
+    }
+
+    public static String toHex(String binary) {
+        int decimal = Integer.parseInt(binary,2);
+        String hexStr = Integer.toString(decimal,16);
+        return hexStr;
     }
 }

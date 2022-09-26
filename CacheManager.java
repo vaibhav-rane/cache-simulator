@@ -5,7 +5,6 @@ import java.util.*;
  * @created 09/25/2022
  */
 public class CacheManager {
-
     Cache L1;
     Cache L2;
     int occurrence = 0;
@@ -118,14 +117,13 @@ public class CacheManager {
     {
         int temp = index;
         int direction = 0;
-        if(temp%2 != 0)
+        if(temp % 2 != 0)
         {
             direction = 1;
             temp--;
         }
         int middle = (ar.length-1)/2;
         allocate(ar, middle, temp, (middle+1)/2, direction);
-
     }
 
 
@@ -222,7 +220,7 @@ public class CacheManager {
     }
 
 
-    public   String format(String input) {
+    public String format(String input) {
         while (input.length() < 8){
             input = "0" + input;
         }
@@ -256,7 +254,7 @@ public class CacheManager {
     public  void read_l1(String data, Cache l1, int counter) {
 
         String address = data;
-        l1.setREAD(l1.getREAD() + 1);
+        l1.setReadCount(l1.getReadCount() + 1);
 
         int index_bit = getIndexBitsFor(address,l1 );
 
@@ -330,7 +328,7 @@ public class CacheManager {
     public  void read_l2(String data, Cache l2) {
 
         String address = data;
-        l2.setREAD(l2.getREAD() + 1);
+        l2.setReadCount(l2.getReadCount() + 1);
 
         int index_bit = getIndexBitsFor(address,l2 );
 
@@ -396,7 +394,7 @@ public class CacheManager {
         List<CacheBlock> block = l1.getCache().get(index_bit);
         //List<CacheBlock> block = l1.cache.get(index_bit);
         String tag = get_tag_bits(address,l1);
-        l1.setWRITE(l1.getWRITE() + 1);
+        l1.setWriteCount(l1.getWriteCount() + 1);
         for(CacheBlock cacheBlock :block)
         {
             if(cacheBlock.getTag().equals(tag))
@@ -470,7 +468,7 @@ public class CacheManager {
         List<CacheBlock> block = l2.getCache().get(index_bit);
         //List<CacheBlock> block = l2.cache.get(index_bit);
         String tag = get_tag_bits(address,l2);
-        l2.setWRITE(l2.getWRITE() + 1);
+        l2.setWriteCount(l2.getWriteCount() + 1);
 
         for(CacheBlock cacheBlock :block)
         {
@@ -513,10 +511,6 @@ public class CacheManager {
         }
 
     }
-
-
-
-
 
     public void updateCache(String address, String tag, List<CacheBlock> l, boolean dirty) {
 
@@ -564,7 +558,7 @@ public class CacheManager {
 
         CacheBlock temp = l.remove(index);
 
-        if(temp.getDirty())
+        if(temp.isDirty())
         {
             if(L2.getSize() != 0) {
 
@@ -666,7 +660,7 @@ public class CacheManager {
 
         CacheBlock temp = l.remove(index);
 
-        if(temp.getDirty())
+        if(temp.isDirty())
         {
             L2.setWriteBackCount(L2.getWriteBackCount() + 1);
             //l2.writeBackCount++;
@@ -697,7 +691,7 @@ public class CacheManager {
                 int index = li.indexOf(cacheBlock);
                 blankIndices.add(index);
                 CacheBlock traffic = li.remove(index);
-                if (traffic.getDirty()) {
+                if (traffic.isDirty()) {
                     traffic_counter++;
                 }
                 break;
@@ -705,69 +699,7 @@ public class CacheManager {
         }
     }
 
-    public void eviction(String address){
-        System.out.println("EVICXTION");
-        int index_bit = getIndexBitsFor(address, L1);
-        String tag = get_tag_bits(address, L1);
-
-        List<CacheBlock> block = L1.getCache().get(index_bit);
-        //List<CacheBlock> block = l1.cache.get(index_bit);
-
-
-        for(int r = 0; r < block.size(); r++)
-        {
-            if(block.get(r).getTag().equals(tag))
-            { 	System.out.println("HOIIIIITTT");
-                // HIT
-
-                L1.getCache().remove(r);
-                //l1.cache.remove(r);
-                //l1.WRITE_BACK++;
-                return;
-
-            }
-
-        }
-    }
-    public  void OPT(String address, String tag, List<CacheBlock> l, boolean dirty, int counter) {
-        int [] temp = new int[l.size()];
-        int count = 0;
-        for (int j = 0; j < l.size(); j++) {
-            for (int i = counter-1; i < opt.size(); i++ ) {
-                if (l.get(j).equals(opt.get(i)) ){
-                    temp[j] = i;
-                    count++;
-                    break;
-                }
-            }
-            if (count == j) {
-                CacheBlock temp2 = l.remove(j);
-                if(temp2.getDirty())
-                {
-                    L1.setWriteBackCount(L1.getWriteBackCount() + 1);
-                    //l1.writeBackCount++;
-                }
-                l.add(j, new CacheBlock(address, tag, L1.getAssociativity() -1 , dirty));
-                return;
-            }
-        }
-        int max_idx = 0;
-        for (int k=0; k<l.size(); k++) {
-            if (temp[k] > temp[max_idx]) {
-                max_idx = k;
-            }
-        }
-        CacheBlock temp2 = l.remove(max_idx);
-        if(temp2.getDirty())
-        {
-            L1.setWriteBackCount(L1.getWriteBackCount() + 1);
-            //l1.writeBackCount++;
-        }
-        l.add(max_idx, new CacheBlock(address, tag, L1.getAssociativity() -1 , dirty));
-        return;
-    }
-
-
+    // TODO: 9/26/22 Migrated to CacheManagerUtils
     public void printCache() {
 
         System.out.println("===== L1 contents =====");
@@ -777,15 +709,16 @@ public class CacheManager {
 
             System.out.print("Set	"+i+": ");
             List<CacheBlock> row = L1.getCache().get(i);
-            //List<CacheBlock> row = l1.cache.get(i);
 
             for(int j = 0; j <row.size() ; j++) {
-                System.out.print(binary_to_hex(row.get(j).getTag())+" "+(row.get(j).getDirty()?"D":"")+"	");
+                System.out.print(toHex(row.get(j).getTag())+" "+(row.get(j).isDirty()?"D":"")+"	");
             }
             System.out.println();
         }
 
     }
+
+    // TODO: 9/26/22 Migrated to CacheManagerUtils
     public void printCache2() {
 
         System.out.println("===== L2 contents =====");
@@ -795,10 +728,9 @@ public class CacheManager {
 
             System.out.print("Set	"+i+": ");
             List<CacheBlock> row = L2.getCache().get(i);
-            //List<CacheBlock> row = l2.cache.get(i);
 
             for(int j = 0; j <row.size() ; j++) {
-                System.out.print(binary_to_hex(row.get(j).getTag())+" "+(row.get(j).getDirty()?"D":"")+"	");
+                System.out.print(toHex(row.get(j).getTag())+" "+(row.get(j).isDirty()?"D":"")+"	");
             }
             System.out.println();
         }
@@ -891,14 +823,12 @@ public class CacheManager {
         double l2_miss_rate = 0.0;
 
         if (l1.getSize() != 0) {
-            l1_miss_rate = ((double)(l1.getReadMissCount() + l1.getWriteMissCount())/(double)(l1.getREAD()+l1.getWRITE()));
+            l1_miss_rate = ((double)(l1.getReadMissCount() + l1.getWriteMissCount())/(double)(l1.getReadCount()+l1.getWriteCount()));
         }
 
         if (L2.getSize() != 0) {
-            l2_miss_rate = ((double)(L2.getReadMissCount())/(double)(L2.getREAD()));
+            l2_miss_rate = ((double)(L2.getReadMissCount())/(double)(L2.getReadCount()));
         }
-//		System.out.println(opt);
-
 
         System.out.println("===== Simulator configuration =====");
         System.out.println("BLOCKSIZE:             "	+	l1.getBlockSize());
@@ -912,22 +842,24 @@ public class CacheManager {
 
 
 
-        printCache();
+        //printCache();
+        CacheManagerUtils.printCacheState(L1);
 
         if(L2.getSize() != 0 )
-            printCache2();
+            //printCache2();
+            CacheManagerUtils.printCacheState(L2);
 
         System.out.println("===== Simulation results (raw) =====");
 
-        System.out.println("a. number of L1 reads:        "	+	l1.getREAD());
+        System.out.println("a. number of L1 reads:        "	+	l1.getReadCount());
         System.out.println("b. number of L1 read misses:  "	+	l1.getReadMissCount());
-        System.out.println("c. number of L1 writes:       "	+	l1.getWRITE());
+        System.out.println("c. number of L1 writes:       "	+	l1.getWriteCount());
         System.out.println("d. number of L1 write misses: "	+	l1.getWriteMissCount());
         System.out.println("e. L1 miss rate:              "	+	String.format("%.6f",l1_miss_rate));
         System.out.println("f. number of L1 writebacks:   "	+	l1.getWriteBackCount());
-        System.out.println("g. number of L2 reads:        "	+	L2.getREAD());
+        System.out.println("g. number of L2 reads:        "	+	L2.getReadCount());
         System.out.println("h. number of L2 read misses:  "	+	L2.getReadMissCount());
-        System.out.println("i. number of L2 writes:       "	+	L2.getWRITE());
+        System.out.println("i. number of L2 writes:       "	+	L2.getWriteCount());
         System.out.println("j. number of L2 write misses: "	+	L2.getWriteMissCount());
         System.out.println("k. L2 miss rate:              "	+	String.format("%.6f",l2_miss_rate));
         System.out.println("l. number of L2 writebacks:   "	+	L2.getWriteBackCount());
@@ -941,11 +873,9 @@ public class CacheManager {
     }
 
 
-    public String binary_to_hex(String binary) {
+    public String toHex(String binary) {
         int decimal = Integer.parseInt(binary,2);
-        String hexStr = Integer.toString(decimal,16);
-
-        return hexStr;
+        return Integer.toString(decimal,16);
     }
 
 
