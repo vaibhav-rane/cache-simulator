@@ -8,7 +8,7 @@ public class CacheSimulatorBuilder {
     public CacheSimulatorBuilder() {
     }
 
-    public CacheSimulatorBuilder init() {
+    public CacheSimulatorBuilder initSimulation() {
         if(this.cacheManager == null)
             this.cacheManager = new CacheManager();
         return this;

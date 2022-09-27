@@ -1,3 +1,4 @@
+import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,12 +23,12 @@ public class CacheManagerUtils {
         return tagBitsCount;
     }
 
-    public static int getIndexBitsFor(String address, Cache cache ) {
+    public static int getIndexBitsFor(String address32, Cache cache ) {
         try {
-            address = hexToBinary(address);
+            address32 = hexToBinary(address32);
             int lower = getTagBitsFor(cache);
             int higher = getIndexBitsCountFor(cache);
-            String index_bits = address.substring(lower,lower+higher);
+            String index_bits = address32.substring(lower,lower+higher);
             int index = Integer.parseInt(index_bits,2);
             return index;
         }catch(Exception e) {
@@ -35,38 +36,22 @@ public class CacheManagerUtils {
         }
     }
 
-    public static String hexToBinary(String hexcode){
-        String binary = "";
-        hexcode = hexcode.toLowerCase();
+    public static String hexToBinary(String hexCode){
+        String binary = new BigInteger(hexCode.toLowerCase(), 16).toString(2);
+        String msbPadding = getMSBPaddingFor(binary);
+        String binary32 = msbPadding + binary;
+        return binary32;
 
-        Map<Character, String> hashMap = new HashMap<>();
+    }
 
-        hashMap.put('0', "0000");
-        hashMap.put('1', "0001");
-        hashMap.put('2', "0010");
-        hashMap.put('3', "0011");
-        hashMap.put('4', "0100");
-        hashMap.put('5', "0101");
-        hashMap.put('6', "0110");
-        hashMap.put('7', "0111");
-        hashMap.put('8', "1000");
-        hashMap.put('9', "1001");
-        hashMap.put('a', "1010");
-        hashMap.put('b', "1011");
-        hashMap.put('c', "1100");
-        hashMap.put('d', "1101");
-        hashMap.put('e', "1110");
-        hashMap.put('f', "1111");
-
-        int i;
-        char ch;
-
-        for (i = 0; i < hexcode.length(); i++) {
-            ch = hexcode.charAt(i);
-            binary += hashMap.get(ch);
+    public static String getMSBPaddingFor(String hex){
+        int paddingLength = 32 - hex.length();
+        if(paddingLength == 0) return "";
+        StringBuilder msbPaddingString = new StringBuilder("");
+        for (int i = 1; i <= paddingLength; i++){
+            msbPaddingString.append("0");
         }
-
-        return binary;
+        return msbPaddingString.toString();
     }
 
     public static void printCacheState(Cache cache){
@@ -75,13 +60,20 @@ public class CacheManagerUtils {
         for(int i = 0; i < cache.getSetCount(); i++)
         {
             System.out.print("Set	"+i+": ");
-            List<CacheBlock> row = cache.getCache().get(i);
+            List<CacheBlock> set = cache.getCache().get(i);
 
-            for(int j = 0; j <row.size() ; j++) {
-                System.out.print(toHex(row.get(j).getTag())+" "+(row.get(j).isDirty()?"D":"")+"	");
+            for(int j = 0; j <set.size() ; j++) {
+                System.out.print(toHex(set.get(j).getTag()) + " " + (set.get(j).isDirty()?"D":"")+"	");
             }
             System.out.println();
         }
+    }
+
+    public static String formatHexAddressTo32BitHexAddress(String input) {
+        while (input.length() < 8){
+            input = "0" + input;
+        }
+        return input;
     }
 
     public static String toHex(String binary) {

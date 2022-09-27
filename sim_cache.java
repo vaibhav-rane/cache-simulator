@@ -21,7 +21,7 @@ public class sim_cache {
         
         CacheSimulatorBuilder simulatorBuilder = new CacheSimulatorBuilder();
         simulatorBuilder
-                .init()
+                .initSimulation()
                 .addCache(L1, CacheType.L1)
                 .addCache(L2, CacheType.L2)
                 .prepare()

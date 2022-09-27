@@ -26,11 +26,11 @@ public class Cache {
     private int writeMissCount = 0;
     private int writeBackCount = 0;
     private String traceFile;
-    private List<String> inputData;
+    private List<String> instructions;
     private List<List<CacheBlock>> cache;
     private List<String> opt;
 
-    int pLRU[][];
+    int PLRU[][];
 
 
     public Cache(int blockSize, int size, int associativity, int replacementPolicy, int inclusionProperty, String traceFile, CacheType type) {
@@ -44,45 +44,43 @@ public class Cache {
         /**
          * Computing number of sets/cache
          * */
-        if (this.associativity != 0) {
-            setCount = ((this.size) /( this.associativity * blockSize));
-        }
+//        if (this.associativity != 0) {
+//            setCount = ((this.size) /( this.associativity * blockSize));
+//        }
 
         this.traceFile = traceFile;
-        inputData = read();
+        instructions = readInstructionsFromTrace();
         cache = new ArrayList<>();
 
         int tempAssoc = this.associativity;
         if(this.associativity <2)
             tempAssoc =2;
 
-        pLRU = new int [setCount][tempAssoc-1];
-
+        initializeSets();
+        PLRU = new int [setCount][tempAssoc-1];
     }
 
-    public List<String> read() {
+    public void initializeSets(){
+        if (this.associativity != 0) {
+            this.setCount = ((this.size) /( this.associativity * this.blockSize));
+        }
+    }
 
-
-        List<String> data = new ArrayList<>();
-
+    public List<String> readInstructionsFromTrace() {
+        List<String> instructions = new ArrayList<>();
         try {
-            File file = new File(traceFile);
-
-            BufferedReader br = new BufferedReader(new FileReader(file));
-
-            String compress;
-
-            while ((compress = br.readLine()) != null) {
-
-                data.add(compress);
-
+            BufferedReader br = new BufferedReader(new FileReader(new File(traceFile)));
+            String instruction;
+            while ((instruction = br.readLine()) != null) {
+                instructions.add(instruction);
             }
 
-        } catch (Exception ignored) {
-            System.out.println(ignored);
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println(e);
         }
 
-        return data;
+        return instructions;
     }
 
     public CacheType getType() {
@@ -189,12 +187,12 @@ public class Cache {
         this.traceFile = traceFile;
     }
 
-    public List<String> getInputData() {
-        return inputData;
+    public List<String> getInstructions() {
+        return instructions;
     }
 
-    public void setInputData(List<String> inputData) {
-        this.inputData = inputData;
+    public void setInstructions(List<String> instructions) {
+        this.instructions = instructions;
     }
 
     public List<List<CacheBlock>> getCache() {
@@ -213,12 +211,12 @@ public class Cache {
         this.opt = opt;
     }
 
-    public int[][] getpLRU() {
-        return pLRU;
+    public int[][] getPLRU() {
+        return PLRU;
     }
 
-    public void setpLRU(int[][] pLRU) {
-        this.pLRU = pLRU;
+    public void setPLRU(int[][] PLRU) {
+        this.PLRU = PLRU;
     }
 
     @Override
@@ -237,10 +235,10 @@ public class Cache {
                 .add("writeMissCount=" + writeMissCount)
                 .add("writeBackCount=" + writeBackCount)
                 .add("traceFile='" + traceFile + "'")
-                .add("inputData=" + inputData)
+                .add("inputData=" + instructions)
                 .add("cache=" + cache)
                 .add("opt=" + opt)
-                .add("pLRU=" + Arrays.toString(pLRU))
+                .add("pLRU=" + Arrays.toString(PLRU))
                 .toString();
     }
 }
