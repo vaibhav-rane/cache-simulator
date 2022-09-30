@@ -4,7 +4,6 @@
  * @created 09/25/2022
  */
 public class sim_cache {
-
     public static void main(String[] args) {
 
         Integer blockSize = Integer.parseInt(args[0]);

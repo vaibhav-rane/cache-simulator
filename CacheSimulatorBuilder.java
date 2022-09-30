@@ -33,7 +33,7 @@ public class CacheSimulatorBuilder {
     }
 
     public void start(){
-        cacheManager.insert(cacheManager.getL1());
+        cacheManager.startSimulation();
         return;
     }
 }

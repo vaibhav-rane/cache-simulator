@@ -1,7 +1,5 @@
 import java.math.BigInteger;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author varane
@@ -80,5 +78,9 @@ public class CacheManagerUtils {
         int decimal = Integer.parseInt(binary,2);
         String hexStr = Integer.toString(decimal,16);
         return hexStr;
+    }
+
+    public static void write(){
+
     }
 }

@@ -6,6 +6,9 @@ public class OPTBlock {
     String data;
     int index;
 
+    public OPTBlock(){
+        super();
+    }
     public OPTBlock(String data, int index) {
 
         this.data = data;

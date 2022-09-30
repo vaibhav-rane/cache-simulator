@@ -4,13 +4,20 @@ import java.util.*;
  * @author Vaibhav R.
  * @created 09/25/2022
  */
+// TODO: 9/30/22 Remove unnecessary try-catch blocks after testing
 public class CacheManager {
     Cache L1;
     Cache L2;
     int occurrence = 0;
     List<String> opt;
     int trafficCounter = 0;
+    int globalIndex = 0;
+    int globalRowIdx = 0;
+    List<Integer> blankIndices = new ArrayList<>();
+    Map<Integer, List<OPTBlock>> setIndexBlockMap = new HashMap<>();
 
+    private static String READ = "r";
+    private static String WRITE = "w";
     public CacheManager() {
     }
 
@@ -70,12 +77,12 @@ public class CacheManager {
         this.blankIndices = blankIndices;
     }
 
-    public int getGlblRowIndex() {
-        return glblRowIndex;
+    public int getGlobalRowIdx() {
+        return globalRowIdx;
     }
 
-    public void setGlblRowIndex(int glblRowIndex) {
-        this.glblRowIndex = glblRowIndex;
+    public void setGlobalRowIdx(int globalRowIdx) {
+        this.globalRowIdx = globalRowIdx;
     }
 
     public Map<Integer, List<OPTBlock>> getSetIndexBlockMap() {
@@ -163,18 +170,35 @@ public class CacheManager {
 
         return deallocation(mid,levelValue,ar);
     }
-
-
-    public  String get_tag_bits(String address, Cache cache ) {
-        address = CacheManagerUtils.hexToBinary(address);
-        return address.substring( 0, CacheManagerUtils.getTagBitsFor(cache));
-
+    public String getTagBitsFor(String memoryAddress, Cache cache ) {
+        String binaryMemoryAddress = CacheManagerUtils.hexToBinary(memoryAddress);
+        int tagSize = CacheManagerUtils.getTagBitsFor(cache);
+        String tagBits = binaryMemoryAddress.substring(0, tagSize);
+        return tagBits;
     }
+    /**
+     * @apiNote read block at address
+     * common method to read instead of two separate methods for each cache*/
+    public void read(String address, Cache cache){
+        int readCount = cache.getReadCount();
+        readCount++;
+        cache.setReadCount(readCount);
 
-    List<Integer> blankIndices = new ArrayList<>();
+        int index = CacheManagerUtils.getIndexBitsFor(address, cache);
+        int tag = CacheManagerUtils.getTagBitsFor(cache);
 
-    int glblRowIndex = 0;
-    public  void read_l1(String data, Cache l1, int counter) {
+        List<CacheBlock> set = cache.getCache().get(index);
+
+        for(CacheBlock block : set){
+            if(block.getTag().equals(tag)){
+                //hit
+                int value = block.getLastAccess();
+
+
+            }
+        }
+    }
+    public void read_l1(String data, Cache l1) {
 
         String address = data;
         l1.setReadCount(l1.getReadCount() + 1);
@@ -183,7 +207,7 @@ public class CacheManager {
 
         List<CacheBlock> block = l1.getCache().get(index_bit);
         //List<CacheBlock> block = l1.cache.get(index_bit);
-        String tag = get_tag_bits(address,l1);
+        String tag = getTagBitsFor(address,l1);
 
         for(CacheBlock cacheBlock :block)
         {
@@ -202,18 +226,14 @@ public class CacheManager {
                     {
                         cb.setLastAccess(cb.getLastAccess()-1);
                     }
-
-
                 }
                 PLRU(l1.PLRU[index_bit], block.indexOf(cacheBlock));
-
                 return;
-
             }
 
         }
         l1.setReadMissCount(l1.getReadMissCount() + 1);
-        glblRowIndex = index_bit;
+        globalRowIdx = index_bit;
 
         // MISS IF SPACE AVAILABLE
         if(block.size()<l1.getAssociativity())
@@ -257,7 +277,7 @@ public class CacheManager {
 
         List<CacheBlock> block = l2.getCache().get(index_bit);
         //List<CacheBlock> block = l2.cache.get(index_bit);
-        String tag = get_tag_bits(address,l2);
+        String tag = getTagBitsFor(address,l2);
 
         for(CacheBlock cacheBlock :block)
         {
@@ -307,7 +327,7 @@ public class CacheManager {
         }
     }
 
-    public void write_l1(String data, Cache l1, int counter ) {
+    public void write_l1(String data, Cache l1) {
         data = CacheManagerUtils.formatHexAddressTo32BitHexAddress(data);
 
 
@@ -316,7 +336,7 @@ public class CacheManager {
 
         List<CacheBlock> block = l1.getCache().get(index_bit);
         //List<CacheBlock> block = l1.cache.get(index_bit);
-        String tag = get_tag_bits(address,l1);
+        String tag = getTagBitsFor(address,l1);
         l1.setWriteCount(l1.getWriteCount() + 1);
         for(CacheBlock cacheBlock :block)
         {
@@ -346,7 +366,7 @@ public class CacheManager {
 
         }
         l1.setWriteMissCount(l1.getWriteMissCount() + 1);
-        glblRowIndex = index_bit;
+        globalRowIdx = index_bit;
         if(block.size()<l1.getAssociativity())
         {
             for(CacheBlock d: block)
@@ -390,7 +410,7 @@ public class CacheManager {
         int index_bit = CacheManagerUtils.getIndexBitsFor(address,l2);
         List<CacheBlock> block = l2.getCache().get(index_bit);
         //List<CacheBlock> block = l2.cache.get(index_bit);
-        String tag = get_tag_bits(address,l2);
+        String tag = getTagBitsFor(address,l2);
         l2.setWriteCount(l2.getWriteCount() + 1);
 
         for(CacheBlock cacheBlock :block)
@@ -436,9 +456,7 @@ public class CacheManager {
     }
 
     public void updateCache(String address, String tag, List<CacheBlock> l, boolean dirty) {
-
         int index = 0;
-
 
         switch (L1.getReplacementPolicy())
         {
@@ -450,7 +468,7 @@ public class CacheManager {
                 break;
             }
             case 2:{
-                index = getEvictedBlockUsingOPT(address,l);
+                index = getEvictedBlockUsingOPT(l);
 
                 break;
             }
@@ -498,20 +516,15 @@ public class CacheManager {
 
     }
 
-    private int getEvictedBlockUsingOPT(String address,  List<CacheBlock> l) {
-        // TODO Auto-generated method stub
-
-        int returnIndex = 0;
-
-        int arr[]=new int [l.size()];
-
+    private int getEvictedBlockUsingOPT(List<CacheBlock> set) {
+        int arr[]=new int [set.size()];
         Arrays.fill(arr, Integer.MAX_VALUE);
 
         for(int i=0; i<arr.length; i++)
         {
-            CacheBlock d= l.get(i);
+            CacheBlock d= set.get(i);
 
-            List<OPTBlock> li = setIndexBlockMap.get(glblRowIndex);
+            List<OPTBlock> li = setIndexBlockMap.get(globalRowIdx);
 
             for(int j=0; j<li.size(); j++)
             {
@@ -519,7 +532,7 @@ public class CacheManager {
 
                 if(temp.getIndex() > globalIndex)
                 {
-                    String tag = get_tag_bits(temp.getData(), L1);
+                    String tag = getTagBitsFor(temp.getData(), L1);
                     if(d.getTag().equals(tag))
                     {
                         arr[i] = temp.getIndex() - globalIndex;
@@ -534,7 +547,7 @@ public class CacheManager {
         for(int i:arr)
             max= Math.max(max, i);
 
-        for(int i=0;i<l.size();i++)
+        for(int i=0;i<set.size();i++)
         {
             if(arr[i] == max)
                 return i;
@@ -564,15 +577,11 @@ public class CacheManager {
                     CacheBlock d = l.get(i);
                     if(d.getLastAccess() == 0)
                     {
-
                         index = i;
-
-
                     }
                     else
                         d.setLastAccess(d.getLastAccess()-1);
                 }
-
                 break;
             }
 
@@ -602,7 +611,7 @@ public class CacheManager {
     public void evictFromL1Cache(CacheBlock temp) {
         // TODO Auto-generated method stub
         int index_bit = CacheManagerUtils.getIndexBitsFor(temp.getData(), L1);
-        String tag = get_tag_bits(temp.getData(), L1);
+        String tag = getTagBitsFor(temp.getData(), L1);
 
         List<CacheBlock> li = L1.getCache().get(index_bit);
         //List<CacheBlock> li = l1.cache.get(index_bit);
@@ -622,120 +631,108 @@ public class CacheManager {
         }
     }
 
-    Map<Integer, List<OPTBlock>> setIndexBlockMap = new HashMap<>();
-
-    int globalIndex = 0;
-    public void insert(Cache l1) {
-        // TODO Auto-generated method stub
+    public void bootstrap(){
         opt = new ArrayList<>();
         int i = 0;
-        for(String instruction: l1.getInstructions())
+        for(String instruction : L1.getInstructions())
         {
             try {
                 String[] instructionComponents = instruction.split(" ");
-                String memoryAddress = instructionComponents[1];
-                memoryAddress = CacheManagerUtils.formatHexAddressTo32BitHexAddress(memoryAddress);
+                String operation = instructionComponents[0].toLowerCase().trim();
+                String unformattedMemoryAddress = instructionComponents[1];
 
-                int index = CacheManagerUtils.getIndexBitsFor(memoryAddress, l1);
-                if(!setIndexBlockMap.containsKey(index))
-                    setIndexBlockMap.put(index, new ArrayList<>());
-                setIndexBlockMap.get(index).add(new OPTBlock(memoryAddress,i++));
+                String memoryAddress = CacheManagerUtils.formatHexAddressTo32BitHexAddress(unformattedMemoryAddress);
+
+                int indexBits = CacheManagerUtils.getIndexBitsFor(memoryAddress, L1);
+
+                List<OPTBlock> blocksForSet = setIndexBlockMap.get(indexBits);
+                if(Objects.isNull(blocksForSet) || blocksForSet.isEmpty()){
+                    blocksForSet = new ArrayList<>();
+                    setIndexBlockMap.put(indexBits, blocksForSet);
+                }
+
+                OPTBlock blockForMemoryAddress = new OPTBlock();
+                blockForMemoryAddress.setData(memoryAddress);
+                blockForMemoryAddress.setIndex(i);
+                i++;
+
+                blocksForSet.add(blockForMemoryAddress);
+
+                String tagBits = getTagBitsFor(memoryAddress, L1);
+                opt.add(tagBits);
             }catch(Exception ignored) {}
         }
+    }
 
-        for(String str : l1.getInstructions())
+    public void executeInstructions(){
+        for(String str : L1.getInstructions())
         {
             try {
-                str = str.split(" ")[1];
-                str = CacheManagerUtils.formatHexAddressTo32BitHexAddress(str);
-                str = get_tag_bits(str,l1);
-                opt.add(str);
-            } catch (Exception e) {
-                continue;
-            }
-
-        }
-        for(String str:l1.getInstructions())
-        {
-            try {
-
                 boolean read = str.split(" ")[0].toLowerCase().contains("r"); //true for read
-
                 str = str.split(" ")[1];
                 str = CacheManagerUtils.formatHexAddressTo32BitHexAddress(str);
                 occurrence++;
 
                 if(read)
-                    read_l1(str,l1, occurrence);
+                    read_l1(str,L1);
                 else
-                    write_l1(str, l1, occurrence);
+                    write_l1(str, L1);
 
                 globalIndex++;
 
-            } catch (Exception e) {
-                continue;
-            }
-
-
+            } catch (Exception e) {}
         }
-        double l1_miss_rate = 0.0;
-        double l2_miss_rate = 0.0;
+    }
+    public void startSimulation() {
+        bootstrap();
+        executeInstructions();
 
-        if (l1.getSize() != 0) {
-            l1_miss_rate = ((double)(l1.getReadMissCount() + l1.getWriteMissCount())/(double)(l1.getReadCount()+l1.getWriteCount()));
+        double l1MissRate = 0.0;
+        double l2MissRate = 0.0;
+
+        if (L1.getSize() != 0) {
+            l1MissRate = ((double)(L1.getReadMissCount() + L1.getWriteMissCount())/(double)(L1.getReadCount()+L1.getWriteCount()));
         }
 
         if (L2.getSize() != 0) {
-            l2_miss_rate = ((double)(L2.getReadMissCount())/(double)(L2.getReadCount()));
+            l2MissRate = ((double)(L2.getReadMissCount())/(double)(L2.getReadCount()));
         }
 
         System.out.println("===== Simulator configuration =====");
-        System.out.println("BLOCKSIZE:             "	+	l1.getBlockSize());
-        System.out.println("L1_SIZE:               "	+	l1.getSize());
-        System.out.println("L1_ASSOC:              "	+	l1.getAssociativity());
+        System.out.println("BLOCKSIZE:             "	+	L1.getBlockSize());
+        System.out.println("L1_SIZE:               "	+	L1.getSize());
+        System.out.println("L1_ASSOC:              "	+	L1.getAssociativity());
         System.out.println("L2_SIZE:               "	+	L2.getSize());
         System.out.println("L2_ASSOC:              "	+	L2.getAssociativity());
-        System.out.println("REPLACEMENT POLICY:    "	+	(l1.getReplacementPolicy() == 0?"LRU":(l1.getReplacementPolicy() == 1?"Pseudo-LRU":"Optimal")));
-        System.out.println("INCLUSION PROPERTY:    "	+	(l1.getInclusionProperty() == 0?"non-inclusive":"inclusive"));
-        System.out.println("trace_file:            "	+	l1.getTraceFile());
+        System.out.println("REPLACEMENT POLICY:    "	+	(L1.getReplacementPolicy() == 0?"LRU":(L1.getReplacementPolicy() == 1?"Pseudo-LRU":"Optimal")));
+        System.out.println("INCLUSION PROPERTY:    "	+	(L1.getInclusionProperty() == 0?"non-inclusive":"inclusive"));
+        System.out.println("trace_file:            "	+	L1.getTraceFile());
 
-
-
-        //printCache();
         CacheManagerUtils.printCacheState(L1);
 
         if(L2.getSize() != 0 )
-            //printCache2();
             CacheManagerUtils.printCacheState(L2);
 
         System.out.println("===== Simulation results (raw) =====");
 
-        System.out.println("a. number of L1 reads:        "	+	l1.getReadCount());
-        System.out.println("b. number of L1 read misses:  "	+	l1.getReadMissCount());
-        System.out.println("c. number of L1 writes:       "	+	l1.getWriteCount());
-        System.out.println("d. number of L1 write misses: "	+	l1.getWriteMissCount());
-        System.out.println("e. L1 miss rate:              "	+	String.format("%.6f",l1_miss_rate));
-        System.out.println("f. number of L1 writebacks:   "	+	l1.getWriteBackCount());
+        System.out.println("a. number of L1 reads:        "	+	L1.getReadCount());
+        System.out.println("b. number of L1 read misses:  "	+	L1.getReadMissCount());
+        System.out.println("c. number of L1 writes:       "	+	L1.getWriteCount());
+        System.out.println("d. number of L1 write misses: "	+	L1.getWriteMissCount());
+        System.out.println("e. L1 miss rate:              "	+	String.format("%.6f",l1MissRate));
+        System.out.println("f. number of L1 writebacks:   "	+	L1.getWriteBackCount());
         System.out.println("g. number of L2 reads:        "	+	L2.getReadCount());
         System.out.println("h. number of L2 read misses:  "	+	L2.getReadMissCount());
         System.out.println("i. number of L2 writes:       "	+	L2.getWriteCount());
         System.out.println("j. number of L2 write misses: "	+	L2.getWriteMissCount());
-        System.out.println("k. L2 miss rate:              "	+	String.format("%.6f",l2_miss_rate));
+        System.out.println("k. L2 miss rate:              "	+	String.format("%.6f",l2MissRate));
         System.out.println("l. number of L2 writebacks:   "	+	L2.getWriteBackCount());
 
-        int total_traffic = (l1.getReadMissCount() + l1.getWriteMissCount() + l1.getWriteBackCount());
+        int total_traffic = (L1.getReadMissCount() + L1.getWriteMissCount() + L1.getWriteBackCount());
         if (L2.getSize() !=0) {
             total_traffic =   L2.getReadMissCount() + L2.getWriteMissCount() + L2.getWriteBackCount() + trafficCounter;
         }
         System.out.println("m. total memory traffic:      "	+	total_traffic);
 
     }
-
-
-    public String toHex(String binary) {
-        int decimal = Integer.parseInt(binary,2);
-        return Integer.toString(decimal,16);
-    }
-
-
 }
