@@ -15,7 +15,6 @@ public class CacheManager {
     int globalRowIdx = 0;
     List<Integer> blankIndices = new ArrayList<>();
     Map<Integer, List<OPTBlock>> setIndexBlockMap = new HashMap<>();
-
     private static String READ = "r";
     private static String WRITE = "w";
     public CacheManager() {
@@ -198,47 +197,46 @@ public class CacheManager {
             }
         }
     }
-    public void read_l1(String data, Cache l1) {
+    public void readFromL1(String address) {
 
-        String address = data;
-        l1.setReadCount(l1.getReadCount() + 1);
-
-        int index_bit = CacheManagerUtils.getIndexBitsFor(address,l1 );
-
-        List<CacheBlock> block = l1.getCache().get(index_bit);
-        //List<CacheBlock> block = l1.cache.get(index_bit);
-        String tag = getTagBitsFor(address,l1);
-
-        for(CacheBlock cacheBlock :block)
+        L1.setReadCount(L1.getReadCount() + 1);
+        //getting index bits to get appropriate set
+        int index_bit = CacheManagerUtils.getIndexBitsFor(address,L1 );
+        //getting set at index
+        List<CacheBlock> setAtIndex = L1.getCache().get(index_bit);
+        //computing tag from the address
+        String tag = getTagBitsFor(address,L1);
+        //checking if the block with tag exists in the set -> HIT
+        for(CacheBlock block : setAtIndex)
         {
-            if(cacheBlock.getTag().equals(tag))
+            if(block.getTag().equals(tag))
             {
-                //READ HIT
-                int value = cacheBlock.getLastAccess();
+                //HIT
+                int value = block.getLastAccess();
 
-                for(CacheBlock cb: block)
+                for(CacheBlock cb: setAtIndex)
                 {
                     if(cb.getTag().equals(tag)) {
 
-                        cb.setLastAccess(l1.getAssociativity() -1);;
+                        cb.setLastAccess(L1.getAssociativity() -1);;
                     }
                     else if(cb.getLastAccess() > value)
                     {
                         cb.setLastAccess(cb.getLastAccess()-1);
                     }
                 }
-                PLRU(l1.PLRU[index_bit], block.indexOf(cacheBlock));
+                PLRU(L1.PLRU[index_bit], setAtIndex.indexOf(block));
                 return;
             }
 
         }
-        l1.setReadMissCount(l1.getReadMissCount() + 1);
+        L1.setReadMissCount(L1.getReadMissCount() + 1);
         globalRowIdx = index_bit;
 
         // MISS IF SPACE AVAILABLE
-        if(block.size()<l1.getAssociativity())
+        if(setAtIndex.size()<L1.getAssociativity())
         {
-            for(CacheBlock d: block)
+            for(CacheBlock d: setAtIndex)
             {
                 d.setLastAccess(d.getLastAccess()-1);
                 d.setOPTCounter(d.getOPTCounter()+1);
@@ -246,24 +244,24 @@ public class CacheManager {
 
             if(blankIndices.size() != 0)
             {
-                block.add(blankIndices.get(0),new CacheBlock(address, tag, l1.getAssociativity() -1 , false));
+                setAtIndex.add(blankIndices.get(0),new CacheBlock(address, tag, L1.getAssociativity() -1 , false));
 
-                PLRU(l1.PLRU[index_bit], blankIndices.remove(0));
+                PLRU(L1.PLRU[index_bit], blankIndices.remove(0));
 
 
             }else {
-                block.add(new CacheBlock(address, tag, l1.getAssociativity() -1 , false));
+                setAtIndex.add(new CacheBlock(address, tag, L1.getAssociativity() -1 , false));
 
-                PLRU(l1.PLRU[index_bit], block.size()-1);
+                PLRU(L1.PLRU[index_bit], setAtIndex.size()-1);
 
             }
 
             if(L2.getSize() != 0)
-                read_l2(data, L2);
+                read_l2(address, L2);
         }
         else // REPLACEMENT
         {
-            updateCache(address, tag,block, false  );
+            updateCache(address, tag,setAtIndex, false  );
             //OPT(address, tag,block, false, counter  );
         }
     }
@@ -327,7 +325,7 @@ public class CacheManager {
         }
     }
 
-    public void write_l1(String data, Cache l1) {
+    public void writeToL1(String data, Cache l1) {
         data = CacheManagerUtils.formatHexAddressTo32BitHexAddress(data);
 
 
@@ -520,7 +518,7 @@ public class CacheManager {
         int arr[]=new int [set.size()];
         Arrays.fill(arr, Integer.MAX_VALUE);
 
-        for(int i=0; i<arr.length; i++)
+        for(int i = 0; i < arr.length; i++)
         {
             CacheBlock d= set.get(i);
 
@@ -608,10 +606,9 @@ public class CacheManager {
 
     }
 
-    public void evictFromL1Cache(CacheBlock temp) {
-        // TODO Auto-generated method stub
-        int index_bit = CacheManagerUtils.getIndexBitsFor(temp.getData(), L1);
-        String tag = getTagBitsFor(temp.getData(), L1);
+    public void evictFromL1Cache(CacheBlock block) {
+        int index_bit = CacheManagerUtils.getIndexBitsFor(block.getData(), L1);
+        String tag = getTagBitsFor(block.getData(), L1);
 
         List<CacheBlock> li = L1.getCache().get(index_bit);
         //List<CacheBlock> li = l1.cache.get(index_bit);
@@ -665,18 +662,18 @@ public class CacheManager {
     }
 
     public void executeInstructions(){
-        for(String str : L1.getInstructions())
+        for(String instruction : L1.getInstructions())
         {
             try {
-                boolean read = str.split(" ")[0].toLowerCase().contains("r"); //true for read
-                str = str.split(" ")[1];
-                str = CacheManagerUtils.formatHexAddressTo32BitHexAddress(str);
-                occurrence++;
+                String[] instructionComponents = instruction.split(" ");
+                String operation = instructionComponents[0].toLowerCase().trim();
+                String unformattedMemoryAddress = instructionComponents[1];
+                String memoryAddress = CacheManagerUtils.formatHexAddressTo32BitHexAddress(unformattedMemoryAddress);
 
-                if(read)
-                    read_l1(str,L1);
+                if(operation.equals(READ))
+                    readFromL1(memoryAddress);
                 else
-                    write_l1(str, L1);
+                    writeToL1(memoryAddress, L1);
 
                 globalIndex++;
 
