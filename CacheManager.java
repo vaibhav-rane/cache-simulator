@@ -119,7 +119,7 @@ public class CacheManager {
         }
     }
 
-    void PLRU(int ar[], int index)
+    void updateLRUTree(int ar[], int index)
     {
         int temp = index;
         int direction = 0;
@@ -219,7 +219,7 @@ public class CacheManager {
                         cb.setLastAccess(cb.getLastAccess()-1);
                     }
                 }
-                PLRU(L1.PLRU[setIndex], setAtIndex.indexOf(block));
+                updateLRUTree(L1.PLRU[setIndex], setAtIndex.indexOf(block));
                 return;
             }
 
@@ -228,25 +228,25 @@ public class CacheManager {
         globalRowIdx = setIndex;
 
         // MISS IF SPACE AVAILABLE
-        if(setAtIndex.size()<L1.getAssociativity())
+        if(setAtIndex.size() < L1.getAssociativity())
         {
-            for(CacheBlock d: setAtIndex)
+            for(CacheBlock d : setAtIndex)
             {
-                d.setLastAccess(d.getLastAccess()-1);
-                d.setOPTCounter(d.getOPTCounter()+1);
+                d.setLastAccess(d.getLastAccess() - 1);
+                d.setOPTCounter(d.getOPTCounter() + 1);
             }
 
             if(blankIndices.size() != 0)
             {
                 setAtIndex.add(blankIndices.get(0),new CacheBlock(address, tag, L1.getAssociativity() -1 , false));
 
-                PLRU(L1.PLRU[setIndex], blankIndices.remove(0));
+                updateLRUTree(L1.PLRU[setIndex], blankIndices.remove(0));
 
 
             }else {
                 setAtIndex.add(new CacheBlock(address, tag, L1.getAssociativity() -1 , false));
 
-                PLRU(L1.PLRU[setIndex], setAtIndex.size()-1);
+                updateLRUTree(L1.PLRU[setIndex], setAtIndex.size()-1);
 
             }
 
@@ -292,7 +292,7 @@ public class CacheManager {
 
                 }
 
-                PLRU(l2.PLRU[index_bit], block.indexOf(cacheBlock));
+                updateLRUTree(l2.PLRU[index_bit], block.indexOf(cacheBlock));
                 return;
 
             }
@@ -311,7 +311,7 @@ public class CacheManager {
 
             block.add(new CacheBlock(address, tag, l2.getAssociativity() -1 , false));
 
-            PLRU(l2.PLRU[index_bit], block.size()-1);
+            updateLRUTree(l2.PLRU[index_bit], block.size()-1);
         }
         else // REPLACEMENT
         {
@@ -350,7 +350,7 @@ public class CacheManager {
 
                 }
 
-                PLRU(L1.PLRU[index_bit], block.indexOf(cacheBlock));
+                updateLRUTree(L1.PLRU[index_bit], block.indexOf(cacheBlock));
 
                 return;
 
@@ -371,13 +371,13 @@ public class CacheManager {
             {
                 block.add(blankIndices.get(0),new CacheBlock(address, tag, L1.getAssociativity() -1 , true));
 
-                PLRU(L1.PLRU[index_bit], blankIndices.remove(0));
+                updateLRUTree(L1.PLRU[index_bit], blankIndices.remove(0));
 
 
             }else {
                 block.add(new CacheBlock(address, tag, L1.getAssociativity() -1 , true));
 
-                PLRU(L1.PLRU[index_bit], block.size()-1);
+                updateLRUTree(L1.PLRU[index_bit], block.size()-1);
 
             }
             if(L2.getSize() != 0)
@@ -421,7 +421,7 @@ public class CacheManager {
 
 
                 }
-                PLRU(l2.PLRU[index_bit], block.indexOf(cacheBlock));
+                updateLRUTree(l2.PLRU[index_bit], block.indexOf(cacheBlock));
                 return;
 
             }
@@ -435,7 +435,7 @@ public class CacheManager {
                 d.setLastAccess(d.getLastAccess()-1);
 
             block.add(new CacheBlock(address, tag, l2.getAssociativity() -1 , true));
-            PLRU(l2.PLRU[index_bit], block.size()-1);
+            updateLRUTree(l2.PLRU[index_bit], block.size()-1);
         }
         else // REPLACEMENT
         {

@@ -57,7 +57,9 @@ public class Cache {
             tempAssoc =2;
 
         initializeSets();
-        PLRU = new int [setCount][tempAssoc-1];
+
+        int noOfPLRUTreeNodes = tempAssoc - 1;
+        PLRU = new int [setCount][noOfPLRUTreeNodes];
     }
 
     public void initializeSets(){
