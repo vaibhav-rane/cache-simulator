@@ -169,12 +169,7 @@ public class CacheManager {
 
         return deallocation(mid,levelValue,ar);
     }
-    public String getTagBitsFor(String memoryAddress, Cache cache ) {
-        String binaryMemoryAddress = CacheManagerUtils.hexToBinary(memoryAddress);
-        int tagSize = CacheManagerUtils.getTagBitsFor(cache);
-        String tagBits = binaryMemoryAddress.substring(0, tagSize);
-        return tagBits;
-    }
+
     /**
      * @apiNote read block at address
      * common method to read instead of two separate methods for each cache*/
@@ -183,7 +178,7 @@ public class CacheManager {
         readCount++;
         cache.setReadCount(readCount);
 
-        int index = CacheManagerUtils.getIndexBitsFor(address, cache);
+        int index = CacheManagerUtils.getSetIndexFor(address, cache);
         int tag = CacheManagerUtils.getTagBitsFor(cache);
 
         List<CacheBlock> set = cache.getCache().get(index);
@@ -198,14 +193,13 @@ public class CacheManager {
         }
     }
     public void readFromL1(String address) {
-
-        L1.setReadCount(L1.getReadCount() + 1);
+        L1.setReadCount( L1.getReadCount() + 1 );
         //getting index bits to get appropriate set
-        int index_bit = CacheManagerUtils.getIndexBitsFor(address,L1 );
+        int setIndex = CacheManagerUtils.getSetIndexFor(address,L1 );
         //getting set at index
-        List<CacheBlock> setAtIndex = L1.getCache().get(index_bit);
+        List<CacheBlock> setAtIndex = L1.getCache().get(setIndex);
         //computing tag from the address
-        String tag = getTagBitsFor(address,L1);
+        String tag = CacheManagerUtils.getTagFor(address,L1);
         //checking if the block with tag exists in the set -> HIT
         for(CacheBlock block : setAtIndex)
         {
@@ -225,13 +219,13 @@ public class CacheManager {
                         cb.setLastAccess(cb.getLastAccess()-1);
                     }
                 }
-                PLRU(L1.PLRU[index_bit], setAtIndex.indexOf(block));
+                PLRU(L1.PLRU[setIndex], setAtIndex.indexOf(block));
                 return;
             }
 
         }
         L1.setReadMissCount(L1.getReadMissCount() + 1);
-        globalRowIdx = index_bit;
+        globalRowIdx = setIndex;
 
         // MISS IF SPACE AVAILABLE
         if(setAtIndex.size()<L1.getAssociativity())
@@ -246,13 +240,13 @@ public class CacheManager {
             {
                 setAtIndex.add(blankIndices.get(0),new CacheBlock(address, tag, L1.getAssociativity() -1 , false));
 
-                PLRU(L1.PLRU[index_bit], blankIndices.remove(0));
+                PLRU(L1.PLRU[setIndex], blankIndices.remove(0));
 
 
             }else {
                 setAtIndex.add(new CacheBlock(address, tag, L1.getAssociativity() -1 , false));
 
-                PLRU(L1.PLRU[index_bit], setAtIndex.size()-1);
+                PLRU(L1.PLRU[setIndex], setAtIndex.size()-1);
 
             }
 
@@ -271,11 +265,11 @@ public class CacheManager {
         String address = data;
         l2.setReadCount(l2.getReadCount() + 1);
 
-        int index_bit = CacheManagerUtils.getIndexBitsFor(address,l2 );
+        int index_bit = CacheManagerUtils.getSetIndexFor(address,l2 );
 
         List<CacheBlock> block = l2.getCache().get(index_bit);
         //List<CacheBlock> block = l2.cache.get(index_bit);
-        String tag = getTagBitsFor(address,l2);
+        String tag = CacheManagerUtils.getTagFor(address,l2);
 
         for(CacheBlock cacheBlock :block)
         {
@@ -330,11 +324,11 @@ public class CacheManager {
 
 
         String address = data;
-        int index_bit = CacheManagerUtils.getIndexBitsFor(address,L1);
+        int index_bit = CacheManagerUtils.getSetIndexFor(address,L1);
 
         List<CacheBlock> block = L1.getCache().get(index_bit);
         //List<CacheBlock> block = l1.cache.get(index_bit);
-        String tag = getTagBitsFor(address,L1);
+        String tag = CacheManagerUtils.getTagFor(address,L1);
         L1.setWriteCount(L1.getWriteCount() + 1);
         for(CacheBlock cacheBlock :block)
         {
@@ -402,10 +396,10 @@ public class CacheManager {
 
 
         String address = data;
-        int index_bit = CacheManagerUtils.getIndexBitsFor(address,l2);
+        int index_bit = CacheManagerUtils.getSetIndexFor(address,l2);
         List<CacheBlock> block = l2.getCache().get(index_bit);
         //List<CacheBlock> block = l2.cache.get(index_bit);
-        String tag = getTagBitsFor(address,l2);
+        String tag = CacheManagerUtils.getTagFor(address,l2);
         l2.setWriteCount(l2.getWriteCount() + 1);
 
         for(CacheBlock cacheBlock :block)
@@ -456,7 +450,7 @@ public class CacheManager {
         switch (L1.getReplacementPolicy())
         {
             case 1:{
-                int index_bit = CacheManagerUtils.getIndexBitsFor(address, L1);
+                int index_bit = CacheManagerUtils.getSetIndexFor(address, L1);
 
                 index = evictionPLRU(L1.PLRU[index_bit]);
 
@@ -527,7 +521,7 @@ public class CacheManager {
 
                 if(temp.getIndex() > globalIndex)
                 {
-                    String tag = getTagBitsFor(temp.getData(), L1);
+                    String tag = CacheManagerUtils.getTagFor(temp.getData(), L1);
                     if(d.getTag().equals(tag))
                     {
                         arr[i] = temp.getIndex() - globalIndex;
@@ -558,7 +552,7 @@ public class CacheManager {
         switch(L2.getReplacementPolicy())
         {
             case 1:{
-                int index_bit = CacheManagerUtils.getIndexBitsFor(address, L2);
+                int index_bit = CacheManagerUtils.getSetIndexFor(address, L2);
 
                 index = evictionPLRU(L2.PLRU[index_bit]);
                 break;
@@ -604,8 +598,8 @@ public class CacheManager {
     }
 
     public void evictFromL1Cache(CacheBlock block) {
-        int index_bit = CacheManagerUtils.getIndexBitsFor(block.getData(), L1);
-        String tag = getTagBitsFor(block.getData(), L1);
+        int index_bit = CacheManagerUtils.getSetIndexFor(block.getData(), L1);
+        String tag = CacheManagerUtils.getTagFor(block.getData(), L1);
 
         List<CacheBlock> li = L1.getCache().get(index_bit);
         //List<CacheBlock> li = l1.cache.get(index_bit);
@@ -637,7 +631,7 @@ public class CacheManager {
 
                 String memoryAddress = CacheManagerUtils.formatHexAddressTo32BitHexAddress(unformattedMemoryAddress);
 
-                int indexBits = CacheManagerUtils.getIndexBitsFor(memoryAddress, L1);
+                int indexBits = CacheManagerUtils.getSetIndexFor(memoryAddress, L1);
 
                 List<OPTBlock> blocksForSet = setIndexBlockMap.get(indexBits);
                 if(Objects.isNull(blocksForSet) || blocksForSet.isEmpty()){
@@ -652,8 +646,8 @@ public class CacheManager {
 
                 blocksForSet.add(blockForMemoryAddress);
 
-                String tagBits = getTagBitsFor(memoryAddress, L1);
-                opt.add(tagBits);
+                String tag = CacheManagerUtils.getTagFor(memoryAddress, L1);
+                opt.add(tag);
             }catch(Exception ignored) {}
         }
     }

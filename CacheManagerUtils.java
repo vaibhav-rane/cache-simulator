@@ -21,7 +21,14 @@ public class CacheManagerUtils {
         return tagBitsCount;
     }
 
-    public static int getIndexBitsFor(String address32, Cache cache ) {
+    public static String getTagFor(String memoryAddress, Cache cache ) {
+        String binaryMemoryAddress = CacheManagerUtils.hexToBinary(memoryAddress);
+        int tagSize = CacheManagerUtils.getTagBitsFor(cache);
+        String tagBits = binaryMemoryAddress.substring(0, tagSize);
+        return tagBits;
+    }
+
+    public static int getSetIndexFor(String address32, Cache cache ) {
         try {
             address32 = hexToBinary(address32);
             int lower = getTagBitsFor(cache);
