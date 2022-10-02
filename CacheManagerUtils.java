@@ -108,6 +108,7 @@ public class CacheManagerUtils {
         for (CacheBlock block : set){
             if(block.getTag().equals(tag))
                 return true;
+            block.setLastAccess(Constants.blockAccessCounter++);
         }
         return false;
     }
