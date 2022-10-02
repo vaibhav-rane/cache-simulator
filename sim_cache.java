@@ -15,9 +15,34 @@ public class sim_cache {
         Integer inclusionProperty = Integer.parseInt(args[6]);
         String traceFile = args[7];
 
-        Cache L1 = new Cache(blockSize, l1Size, l1Associativity, replacementPolicy, inclusionProperty, traceFile, CacheType.L1);
-        Cache L2 = new Cache(blockSize, l2Size, l2Associativity, replacementPolicy, inclusionProperty, traceFile, CacheType.L2);
-        
+
+        Cache L1 = new CacheBuilder()
+                .builder()
+                .blockSize(blockSize)
+                .size(l1Size)
+                .associativity(l1Associativity)
+                .replacementPolicy(replacementPolicy)
+                .inclusiveProperty(inclusionProperty)
+                .traceFile(traceFile)
+                .build();
+
+
+        Cache L2 = new CacheBuilder()
+                .builder()
+                .blockSize(blockSize)
+                .size(l2Size)
+                .associativity(l2Associativity)
+                .replacementPolicy(replacementPolicy)
+                .inclusiveProperty(inclusionProperty)
+                .traceFile(traceFile)
+                .build();
+
+        L1.setType(CacheType.L1);
+        L2.setType(CacheType.L2);
+
+        L1.setNextLevelCache(L2);
+        L2.setPrevLevelCache(L1);
+
         CacheSimulatorBuilder simulatorBuilder = new CacheSimulatorBuilder();
         simulatorBuilder
                 .initSimulation()

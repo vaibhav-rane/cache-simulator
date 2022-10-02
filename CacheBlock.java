@@ -9,6 +9,9 @@ public class CacheBlock {
     private int OPTCounter = 0;
     private Boolean dirty = true;
 
+    public CacheBlock() {
+    }
+
     public CacheBlock(String data, String tag, int lastAccess, Boolean dirty) {
         super();
         this.data = data;

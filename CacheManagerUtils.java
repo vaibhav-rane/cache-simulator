@@ -1,5 +1,7 @@
 import java.math.BigInteger;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * @author varane
@@ -16,17 +18,24 @@ public class CacheManagerUtils {
         return offsetBitsCount;
     }
 
-    public static int getTagBitsFor(Cache cache) {
+    public static int getTagBitsCountFor(Cache cache) {
         int tagBitsCount = 32 - getIndexBitsCountFor(cache) - getOffsetBitsCountFor(cache);
         return tagBitsCount;
     }
 
-    public static int getIndexBitsFor(String address32, Cache cache ) {
+    public static String getTagFor(String memoryAddress, Cache cache ) {
+        String binaryMemoryAddress = CacheManagerUtils.hexToBinary(memoryAddress);
+        int tagSize = CacheManagerUtils.getTagBitsCountFor(cache);
+        String tagBits = binaryMemoryAddress.substring(0, tagSize);
+        return tagBits;
+    }
+
+    public static int getSetIndexFor(String address, Cache cache ) {
         try {
-            address32 = hexToBinary(address32);
-            int lower = getTagBitsFor(cache);
+            address = hexToBinary(address);
+            int lower = getTagBitsCountFor(cache);
             int higher = getIndexBitsCountFor(cache);
-            String index_bits = address32.substring(lower,lower+higher);
+            String index_bits = address.substring(lower,lower+higher);
             int index = Integer.parseInt(index_bits,2);
             return index;
         }catch(Exception e) {
@@ -58,7 +67,7 @@ public class CacheManagerUtils {
         for(int i = 0; i < cache.getSetCount(); i++)
         {
             System.out.print("Set	"+i+": ");
-            List<CacheBlock> set = cache.getCache().get(i);
+            List<CacheBlock> set = cache.getSets().get(i);
 
             for(int j = 0; j <set.size() ; j++) {
                 System.out.print(toHex(set.get(j).getTag()) + " " + (set.get(j).isDirty()?"D":"")+"	");
@@ -80,7 +89,43 @@ public class CacheManagerUtils {
         return hexStr;
     }
 
+    public static List<CacheBlock> getSetForSetIndex(int setIndex, Cache cache){
+        return cache.getSets().get(setIndex);
+    }
+
     public static void write(){
 
+    }
+
+    public static boolean isHit(String address, Cache cache){
+        int setIndex = getSetIndexFor(address, cache);
+        List<CacheBlock> set = getSetForSetIndex(setIndex, cache);
+        if(Objects.isNull(set) || set.isEmpty()){
+            return false;
+        }
+
+        String tag = getTagFor(address, cache);
+        for (CacheBlock block : set){
+            if(block.getTag().equals(tag))
+                return true;
+        }
+        return false;
+    }
+
+    public static CacheBlock getBlockAt(String address, Cache cache){
+        int setIndex = getSetIndexFor(address, cache);
+        String tag = getTagFor(address, cache);
+        List<CacheBlock> set = getSetForSetIndex(setIndex, cache);
+        for (CacheBlock block : set){
+            if(block.getTag().equals(tag))
+                return block;
+        }
+        return null;
+    }
+
+    public static boolean isSetVacantFor(Cache cache, String address){
+        int index = getSetIndexFor(address, cache);
+        List<CacheBlock> set = cache.getSets().get(index);
+        return set.size() < cache.getAssociativity();
     }
 }

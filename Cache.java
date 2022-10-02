@@ -4,6 +4,8 @@ import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 import java.util.StringJoiner;
 
 /**
@@ -17,23 +19,33 @@ public class Cache {
     private int blockSize;
     private int size;
     private int associativity;
-    private int replacementPolicy;
-    private int inclusionProperty;
+    private ReplacementPolicy replacementPolicy;
+    private InclusiveProperty inclusionProperty;
     private int setCount;
+
+    private int blockCount;
     private int readCount = 0;
     private int writeCount = 0;
     private int readMissCount = 0;
+
+    private int readHitCount = 0;
     private int writeMissCount = 0;
+
+    private int writeHitCount = 0;
     private int writeBackCount = 0;
     private String traceFile;
     private List<String> instructions;
-    private List<List<CacheBlock>> cache;
+    private List<List<CacheBlock>> sets;
     private List<String> opt;
-
     int PLRU[][];
 
+    private Cache prevLevelCache;
+    private Cache nextLevelCache;
 
-    public Cache(int blockSize, int size, int associativity, int replacementPolicy, int inclusionProperty, String traceFile, CacheType type) {
+    private Map<Integer, Queue<CacheBlock>> setLruQueueMap;
+    public Cache(){}
+
+    public Cache(int blockSize, int size, int associativity, ReplacementPolicy replacementPolicy, InclusiveProperty inclusionProperty, String traceFile, CacheType type) {
 
         this.blockSize = blockSize;
         this.size = size;
@@ -42,15 +54,14 @@ public class Cache {
         this.inclusionProperty = inclusionProperty;
         this.type = type;
         /**
-         * Computing number of sets/cache
+         * Computing number of sets/sets
          * */
 //        if (this.associativity != 0) {
 //            setCount = ((this.size) /( this.associativity * blockSize));
 //        }
 
         this.traceFile = traceFile;
-        instructions = readInstructionsFromTrace();
-        cache = new ArrayList<>();
+        sets = new ArrayList<>();
 
         int tempAssoc = this.associativity;
         if(this.associativity <2)
@@ -66,21 +77,28 @@ public class Cache {
         }
     }
 
-    public List<String> readInstructionsFromTrace() {
-        List<String> instructions = new ArrayList<>();
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(new File(traceFile)));
-            String instruction;
-            while ((instruction = br.readLine()) != null) {
-                instructions.add(instruction);
-            }
+    public int getWriteHitCount() {
+        return writeHitCount;
+    }
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println(e);
-        }
+    public void setWriteHitCount(int writeHitCount) {
+        this.writeHitCount = writeHitCount;
+    }
 
-        return instructions;
+    public int getReadHitCount() {
+        return readHitCount;
+    }
+
+    public void setReadHitCount(int readHitCount) {
+        this.readHitCount = readHitCount;
+    }
+
+    public Map<Integer, Queue<CacheBlock>> getSetLruQueueMap() {
+        return setLruQueueMap;
+    }
+
+    public void setSetLruQueueMap(Map<Integer, Queue<CacheBlock>> setLruQueueMap) {
+        this.setLruQueueMap = setLruQueueMap;
     }
 
     public CacheType getType() {
@@ -115,19 +133,35 @@ public class Cache {
         this.associativity = associativity;
     }
 
-    public int getReplacementPolicy() {
+    public Cache getNextLevelCache() {
+        return nextLevelCache;
+    }
+
+    public void setNextLevelCache(Cache nextLevelCache) {
+        this.nextLevelCache = nextLevelCache;
+    }
+
+    public Cache getPrevLevelCache() {
+        return prevLevelCache;
+    }
+
+    public void setPrevLevelCache(Cache prevLevelCache) {
+        this.prevLevelCache = prevLevelCache;
+    }
+
+    public ReplacementPolicy getReplacementPolicy() {
         return replacementPolicy;
     }
 
-    public void setReplacementPolicy(int replacementPolicy) {
+    public void setReplacementPolicy(ReplacementPolicy replacementPolicy) {
         this.replacementPolicy = replacementPolicy;
     }
 
-    public int getInclusionProperty() {
+    public InclusiveProperty getInclusionProperty() {
         return inclusionProperty;
     }
 
-    public void setInclusionProperty(int inclusionProperty) {
+    public void setInclusionProperty(InclusiveProperty inclusionProperty) {
         this.inclusionProperty = inclusionProperty;
     }
 
@@ -137,6 +171,14 @@ public class Cache {
 
     public void setSetCount(int setCount) {
         this.setCount = setCount;
+    }
+
+    public int getBlockCount() {
+        return blockCount;
+    }
+
+    public void setBlockCount(int blockCount) {
+        this.blockCount = blockCount;
     }
 
     public int getReadCount() {
@@ -195,12 +237,12 @@ public class Cache {
         this.instructions = instructions;
     }
 
-    public List<List<CacheBlock>> getCache() {
-        return cache;
+    public List<List<CacheBlock>> getSets() {
+        return sets;
     }
 
-    public void setCache(List<List<CacheBlock>> cache) {
-        this.cache = cache;
+    public void setSets(List<List<CacheBlock>> sets) {
+        this.sets = sets;
     }
 
     public List<String> getOpt() {
@@ -219,6 +261,10 @@ public class Cache {
         this.PLRU = PLRU;
     }
 
+    public boolean hasNextLevel(){
+        return this.getNextLevelCache() != null;
+    }
+
     @Override
     public String toString() {
         return new StringJoiner(", ", Cache.class.getSimpleName() + "[", "]")
@@ -235,8 +281,8 @@ public class Cache {
                 .add("writeMissCount=" + writeMissCount)
                 .add("writeBackCount=" + writeBackCount)
                 .add("traceFile='" + traceFile + "'")
-                .add("inputData=" + instructions)
-                .add("cache=" + cache)
+                .add("inputData=" + instructions.size())
+                .add("#sets=" + sets.size())
                 .add("opt=" + opt)
                 .add("pLRU=" + Arrays.toString(PLRU))
                 .toString();
