@@ -8,7 +8,6 @@ import java.util.*;
 public class CacheManager {
     Cache L1;
     Cache L2;
-    int occurrence = 0;
     List<String> opt;
     int trafficCounter = 0;
     int globalIndex = 0;
@@ -42,14 +41,6 @@ public class CacheManager {
     public void setL2(Cache l2) {
         this.L2 = l2;
         l2.setCache(new ArrayList<>());
-    }
-
-    public int getOccurrence() {
-        return occurrence;
-    }
-
-    public void setOccurrence(int occurrence) {
-        this.occurrence = occurrence;
     }
 
     public List<String> getOpt() {
