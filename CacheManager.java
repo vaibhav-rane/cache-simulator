@@ -257,7 +257,7 @@ public class CacheManager {
             }
 
             if(L2.getSize() != 0)
-                read_l2(address, L2);
+                readFromL2(address, L2);
         }
         else // REPLACEMENT
         {
@@ -266,7 +266,7 @@ public class CacheManager {
         }
     }
 
-    public  void read_l2(String data, Cache l2) {
+    public  void readFromL2(String data, Cache l2) {
 
         String address = data;
         l2.setReadCount(l2.getReadCount() + 1);
@@ -325,17 +325,17 @@ public class CacheManager {
         }
     }
 
-    public void writeToL1(String data, Cache l1) {
+    public void writeToL1(String data) {
         data = CacheManagerUtils.formatHexAddressTo32BitHexAddress(data);
 
 
         String address = data;
-        int index_bit = CacheManagerUtils.getIndexBitsFor(address,l1);
+        int index_bit = CacheManagerUtils.getIndexBitsFor(address,L1);
 
-        List<CacheBlock> block = l1.getCache().get(index_bit);
+        List<CacheBlock> block = L1.getCache().get(index_bit);
         //List<CacheBlock> block = l1.cache.get(index_bit);
-        String tag = getTagBitsFor(address,l1);
-        l1.setWriteCount(l1.getWriteCount() + 1);
+        String tag = getTagBitsFor(address,L1);
+        L1.setWriteCount(L1.getWriteCount() + 1);
         for(CacheBlock cacheBlock :block)
         {
             if(cacheBlock.getTag().equals(tag))
@@ -346,7 +346,7 @@ public class CacheManager {
                 {
                     if(cb.getTag().equals(tag)) {
                         cb.setDirty(true);
-                        cb.setLastAccess(l1.getAssociativity() -1);;
+                        cb.setLastAccess(L1.getAssociativity() -1);;
                     }
                     else if(cb.getLastAccess() > value)
                     {
@@ -356,16 +356,16 @@ public class CacheManager {
 
                 }
 
-                PLRU(l1.PLRU[index_bit], block.indexOf(cacheBlock));
+                PLRU(L1.PLRU[index_bit], block.indexOf(cacheBlock));
 
                 return;
 
             }
 
         }
-        l1.setWriteMissCount(l1.getWriteMissCount() + 1);
+        L1.setWriteMissCount(L1.getWriteMissCount() + 1);
         globalRowIdx = index_bit;
-        if(block.size()<l1.getAssociativity())
+        if(block.size()<L1.getAssociativity())
         {
             for(CacheBlock d: block)
             {
@@ -375,22 +375,19 @@ public class CacheManager {
 
             if(blankIndices.size() != 0)
             {
-                block.add(blankIndices.get(0),new CacheBlock(address, tag, l1.getAssociativity() -1 , true));
+                block.add(blankIndices.get(0),new CacheBlock(address, tag, L1.getAssociativity() -1 , true));
 
-                PLRU(l1.PLRU[index_bit], blankIndices.remove(0));
+                PLRU(L1.PLRU[index_bit], blankIndices.remove(0));
 
 
             }else {
-                block.add(new CacheBlock(address, tag, l1.getAssociativity() -1 , true));
+                block.add(new CacheBlock(address, tag, L1.getAssociativity() -1 , true));
 
-                PLRU(l1.PLRU[index_bit], block.size()-1);
+                PLRU(L1.PLRU[index_bit], block.size()-1);
 
             }
-
-
-
             if(L2.getSize() != 0)
-                read_l2(data, L2);
+                readFromL2(data, L2);
         }
         else // REPLACEMENT
         {	updateCache(address, tag,block, true  );
@@ -510,7 +507,7 @@ public class CacheManager {
         l.add(index, new CacheBlock(address, tag, L1.getAssociativity() -1 , dirty));
 
         if(L2.getSize() != 0 )
-            read_l2(address, L2);
+            readFromL2(address, L2);
 
     }
 
@@ -673,7 +670,7 @@ public class CacheManager {
                 if(operation.equals(READ))
                     readFromL1(memoryAddress);
                 else
-                    writeToL1(memoryAddress, L1);
+                    writeToL1(memoryAddress);
 
                 globalIndex++;
 
