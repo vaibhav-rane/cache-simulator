@@ -59,8 +59,8 @@ public class CPU {
     }
 
     public void boot(){
-        this.L1.setType(CacheType.L1);
-        this.L2.setType(CacheType.L2);
+//        this.L1.setType(CacheType.L1);
+//        this.L2.setType(CacheType.L2);
 
         /**
          * Initializing Caches*/
@@ -69,7 +69,7 @@ public class CPU {
         for (Cache cache : caches){
 
             if(cache.getSize() == 0){
-                cache.getPrevLevelCache().setNextLevelCache(null);
+                //cache.getPrevLevelCache().setNextLevelCache(null);
                 continue;
             }
             int blockCount = cache.getSize() / cache.getBlockSize();
@@ -154,6 +154,7 @@ public class CPU {
         }
     }
 
+
     /**
      * -Allocates a memory block corresponding to the supplied memory address
      * -if the target set is full, evicts the block as per the replacement policy
@@ -185,9 +186,10 @@ public class CPU {
     }
 
     /**
-     * Checks if a block for the address already present in the cache
+     * Checks if a block for the address already present in the supplied cache
      * increments the readCounter
-     * if present -> HIT -> updates the access counter
+     * if present -> HIT
+     *      updates the access counter
      *      increments the readHit counter
      * MISS -> increments the readMiss counter*/
     public boolean isReadHit(Cache cache, String address){
@@ -211,9 +213,9 @@ public class CPU {
     public void write(String address){
         /**
          * Attempting to WRITE in L1*/
-        boolean writeHit = isWriteHit(L1, address);
+        boolean l1WriteHit = isWriteHit(L1, address);
 
-        if(! writeHit){
+        if(! l1WriteHit){
             /**
              * L1 WRITE MISS -> READ from L2*/
 
@@ -273,13 +275,14 @@ public class CPU {
         CacheBlock blockToWrite = CacheManagerUtils.getBlockAt(address, cache);
         if ( Objects.nonNull(blockToWrite) ){
             /**
-             * HIT*/
+             * WRITE HIT*/
             cache.setWriteHitCount(cache.getWriteHitCount() + 1);
             makeMeDirty(blockToWrite);
             blockToWrite.setLastAccess(Constants.blockAccessCounter++);
             return true;
         }
-        //MISS
+        /**
+         * WRITE MISS*/
         cache.setWriteMissCount(cache.getWriteMissCount() + 1);
         return false;
     }

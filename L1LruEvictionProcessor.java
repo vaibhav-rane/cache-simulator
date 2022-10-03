@@ -33,28 +33,30 @@ public class L1LruEvictionProcessor implements EvictionProcessor{
         if (evictedBlock.isDirty()){
             cache.setWriteBackCount(cache.getWriteBackCount() + 1);
             if(cache.hasNextLevel()){
-                issueWriteBackTo(address, cache.getNextLevelCache());
+                issueWriteBackTo(evictedBlock.getAddress(), cache.getNextLevelCache());
             }
         }
     }
 
-    public void issueWriteBackTo(String address, Cache cache){
+    public void issueWriteBackTo(String addressOfEvictedBlock, Cache cache){
         cache.setWriteCount(cache.getWriteCount() + 1);
-        CacheBlock blockToWriteBackOn = CacheManagerUtils.getBlockAt(address, cache);
+        CacheBlock blockToWriteBackOn = CacheManagerUtils.getBlockAt(addressOfEvictedBlock, cache);
         if(Objects.isNull(blockToWriteBackOn)){
-            //block is not present in the set
+            /**
+             * L2 WRITE MISS*/
             cache.setWriteMissCount(cache.getWriteMissCount() + 1);
-            CacheBlock block = CacheManagerUtils.createNewCacheBlockFor(cache, address);
+            CacheBlock block = CacheManagerUtils.createNewCacheBlockFor(cache, addressOfEvictedBlock);
             block.setDirty(true);
 
-            if(CacheManagerUtils.isSetVacantFor(cache, address)){
+            if(CacheManagerUtils.isSetVacantFor(cache, addressOfEvictedBlock)){
                 CacheManagerUtils.addBlockToCache(cache, block);
             }
             else {
-
+                /**
+                 * L2 is Full*/
                 new EvictionManager()
                         .getEvictionProcessorFor(cache.getReplacementPolicy(), CacheType.L2)
-                        .evict(address, cache);
+                        .evict(addressOfEvictedBlock, cache);
                 CacheManagerUtils.addBlockToCache(cache, block);
             }
         }

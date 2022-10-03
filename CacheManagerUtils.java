@@ -17,14 +17,14 @@ public class CacheManagerUtils {
         return offsetBitsCount;
     }
 
-    public static int getTagBitsCountFor(Cache cache) {
+    public static int getTagSize(Cache cache) {
         int tagBitsCount = 32 - getIndexBitsCountFor(cache) - getOffsetBitsCountFor(cache);
         return tagBitsCount;
     }
 
     public static String getTagFor(String memoryAddress, Cache cache ) {
         String binaryMemoryAddress = CacheManagerUtils.hexToBinary(memoryAddress);
-        int tagSize = CacheManagerUtils.getTagBitsCountFor(cache);
+        int tagSize = CacheManagerUtils.getTagSize(cache);
         String tagBits = binaryMemoryAddress.substring(0, tagSize);
         return tagBits;
     }
@@ -32,7 +32,7 @@ public class CacheManagerUtils {
     public static int getSetIndexFor(String address, Cache cache ) {
         try {
             address = hexToBinary(address);
-            int lower = getTagBitsCountFor(cache);
+            int lower = getTagSize(cache);
             int higher = getIndexBitsCountFor(cache);
             String index_bits = address.substring(lower,lower+higher);
             int index = Integer.parseInt(index_bits,2);

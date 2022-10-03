@@ -40,8 +40,10 @@ public class sim_cache {
         L1.setType(CacheType.L1);
         L2.setType(CacheType.L2);
 
-        L1.setNextLevelCache(L2);
-        L2.setPrevLevelCache(L1);
+        if(L2.getSize() > 0){
+            L1.setNextLevelCache(L2);
+            L2.setPrevLevelCache(L1);
+        }
 
         CPU cpu = new CPU();
         cpu.setTraceFile(traceFile);
