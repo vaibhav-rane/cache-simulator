@@ -13,7 +13,7 @@ public class LruEvictionProcessor implements EvictionProcessor{
 
         int setIndex = CacheManagerUtils.getSetIndexFor(address, cache);
 
-        List<CacheBlock> set = cache.getSets().get(setIndex);
+        List<CacheBlock> set = CacheManagerUtils.getSetForSetIndex(setIndex, cache);
 
         int minAccess = Integer.MAX_VALUE;
         int lruIndex = -1;
@@ -57,6 +57,11 @@ public class LruEvictionProcessor implements EvictionProcessor{
                 writeBackDirtyBlockToNextLevel(cache, address);
             }
         }
+    }
+
+    @Override
+    public CacheType getSupportedType() {
+        return CacheType.L1;
     }
 
     public void handleL2Dirt(CacheBlock evictedBlock, Cache cache){

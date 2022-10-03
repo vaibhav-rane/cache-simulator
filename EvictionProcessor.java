@@ -3,4 +3,5 @@
  */
 public interface EvictionProcessor {
     void evict(String address, Cache cache);
+    CacheType getSupportedType();
 }

@@ -4,7 +4,8 @@
  */
 public class CacheBlock {
 
-    private String data, tag;
+    private String address;
+    private String tag;
     private int lastAccess;
     private int OPTCounter = 0;
     private Boolean dirty = true;
@@ -12,9 +13,9 @@ public class CacheBlock {
     public CacheBlock() {
     }
 
-    public CacheBlock(String data, String tag, int lastAccess, Boolean dirty) {
+    public CacheBlock(String address, String tag, int lastAccess, Boolean dirty) {
         super();
-        this.data = data;
+        this.address = address;
         this.tag = tag;
         this.lastAccess = lastAccess;
         this.dirty = dirty;
@@ -26,11 +27,11 @@ public class CacheBlock {
         this.tag = tag;
     }
 
-    public String getData() {
-        return data;
+    public String getAddress() {
+        return address;
     }
-    public void setData(String data) {
-        this.data = data;
+    public void setAddress(String address) {
+        this.address = address;
     }
     public int getLastAccess() {
         return lastAccess;

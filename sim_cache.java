@@ -43,12 +43,20 @@ public class sim_cache {
         L1.setNextLevelCache(L2);
         L2.setPrevLevelCache(L1);
 
-        CacheSimulatorBuilder simulatorBuilder = new CacheSimulatorBuilder();
-        simulatorBuilder
-                .initSimulation()
-                .addCache(L1, CacheType.L1)
-                .addCache(L2, CacheType.L2)
-                .prepare()
-                .start();
+        CPU cpu = new CPU();
+        cpu.setTraceFile(traceFile);
+        cpu.setL1(L1);
+        cpu.setL2(L2);
+
+        cpu.boot();
+        cpu.run();
+
+//        CacheSimulatorBuilder simulatorBuilder = new CacheSimulatorBuilder();
+//        simulatorBuilder
+//                .initSimulation()
+//                .addCache(L1, CacheType.L1)
+//                .addCache(L2, CacheType.L2)
+//                .prepare()
+//                .start();
     }
 }

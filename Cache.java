@@ -43,34 +43,17 @@ public class Cache {
     private Cache nextLevelCache;
 
     private Map<Integer, Queue<CacheBlock>> setLruQueueMap;
-    public Cache(){}
+    public Cache(){
+        this.sets = new ArrayList<>();
+        initializeSets();
+    }
 
-    public Cache(int blockSize, int size, int associativity, ReplacementPolicy replacementPolicy, InclusiveProperty inclusionProperty, String traceFile, CacheType type) {
-
-        this.blockSize = blockSize;
-        this.size = size;
-        this.associativity = associativity;
-        this.replacementPolicy = replacementPolicy;
-        this.inclusionProperty = inclusionProperty;
-        this.type = type;
-        /**
-         * Computing number of sets/sets
-         * */
-//        if (this.associativity != 0) {
-//            setCount = ((this.size) /( this.associativity * blockSize));
-//        }
-
-        this.traceFile = traceFile;
-        sets = new ArrayList<>();
-
+    public void initializePLRU(){
         int tempAssoc = this.associativity;
         if(this.associativity <2)
             tempAssoc =2;
-
-        initializeSets();
         PLRU = new int [setCount][tempAssoc-1];
     }
-
     public void initializeSets(){
         if (this.associativity != 0) {
             this.setCount = ((this.size) /( this.associativity * this.blockSize));
@@ -265,6 +248,9 @@ public class Cache {
         return this.getNextLevelCache() != null;
     }
 
+    public List<CacheBlock> getSetAtIndex(int setIndex){
+        return this.sets.get(setIndex);
+    }
     @Override
     public String toString() {
         return new StringJoiner(", ", Cache.class.getSimpleName() + "[", "]")
@@ -281,8 +267,8 @@ public class Cache {
                 .add("writeMissCount=" + writeMissCount)
                 .add("writeBackCount=" + writeBackCount)
                 .add("traceFile='" + traceFile + "'")
-                .add("inputData=" + instructions.size())
-                .add("#sets=" + sets.size())
+//                .add("inputData=" + instructions.size())
+//                .add("#sets=" + sets.size())
                 .add("opt=" + opt)
                 .add("pLRU=" + Arrays.toString(PLRU))
                 .toString();

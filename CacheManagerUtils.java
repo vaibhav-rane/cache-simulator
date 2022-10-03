@@ -1,5 +1,4 @@
 import java.math.BigInteger;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -128,5 +127,39 @@ public class CacheManagerUtils {
         int index = getSetIndexFor(address, cache);
         List<CacheBlock> set = cache.getSets().get(index);
         return set.size() < cache.getAssociativity();
+    }
+
+    public static boolean isSetVacantFor(Cache cache, CacheBlock block){
+        int index = getSetIndexFor(block.getAddress(), cache);
+        List<CacheBlock> set = cache.getSets().get(index);
+        return set.size() < cache.getAssociativity();
+    }
+
+    public static String getOperation(String instruction){
+        String[] instructionComponents = instruction.split(" ");
+        String operation = instructionComponents[0].trim().toLowerCase();
+        return operation;
+    }
+
+    public static String getMemoryAddress(String instruction){
+        String[] instructionComponents = instruction.split(" ");
+        String unformattedMemoryAddress = instructionComponents[1];
+        String memoryAddress = CacheManagerUtils.formatHexAddressTo32BitHexAddress(unformattedMemoryAddress);
+        return memoryAddress;
+    }
+
+    public static void addBlockToCache(Cache cache, CacheBlock block){
+        List<CacheBlock> targetSet = cache.getSetAtIndex(getSetIndexFor(block.getAddress(), cache));
+        targetSet.add(block);
+    }
+
+    public static CacheBlock createNewCacheBlockFor(Cache cache, String address){
+        CacheBlock block = new CacheBlock();
+        block.setAddress(address);
+        block.setTag(CacheManagerUtils.getTagFor(address, cache));
+        block.setDirty(false);
+        //todo update the access based on policy
+        block.setLastAccess(Constants.blockAccessCounter++);
+        return block;
     }
 }
