@@ -59,33 +59,36 @@ public class CPU {
     }
 
     public void boot(){
-//        this.L1.setType(CacheType.L1);
-//        this.L2.setType(CacheType.L2);
+
+        if(L2.getSize() > 0){
+            L1.setNextLevelCache(L2);
+            L2.setPrevLevelCache(L1);
+        }
 
         /**
          * Initializing Caches*/
-        List<Cache> caches = Arrays.asList(L1, L2);
-
-        for (Cache cache : caches){
-
-            if(cache.getSize() == 0){
-                //cache.getPrevLevelCache().setNextLevelCache(null);
-                continue;
-            }
-            int blockCount = cache.getSize() / cache.getBlockSize();
-            int setCount = blockCount / cache.getAssociativity();
-
-            cache.setSetCount(setCount);
-            cache.setBlockCount(blockCount);
-
-            List<List<CacheBlock>> sets = new ArrayList<>();
-            for (int i = 1; i <= setCount; i++){
-                List<CacheBlock> blocks = new ArrayList<>();
-                sets.add(blocks);
-            };
-            cache.setSets(sets);
-
-        }
+//        List<Cache> caches = Arrays.asList(L1, L2);
+//
+//        for (Cache cache : caches){
+//
+//            if(cache.getSize() == 0){
+//                //cache.getPrevLevelCache().setNextLevelCache(null);
+//                continue;
+//            }
+//            int blockCount = cache.getSize() / cache.getBlockSize();
+//            int setCount = blockCount / cache.getAssociativity();
+//
+//            cache.setSetCount(setCount);
+//            cache.setBlockCount(blockCount);
+//
+//            List<List<CacheBlock>> sets = new ArrayList<>();
+//            for (int i = 1; i <= setCount; i++){
+//                List<CacheBlock> blocks = new ArrayList<>();
+//                sets.add(blocks);
+//            };
+//            cache.setSets(sets);
+//
+//        }
 
         /**
          * Reading instructions from trace file*/

@@ -1,3 +1,6 @@
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Created by varane on 10/1/22.
  */
@@ -44,12 +47,30 @@ public class CacheBuilder {
         return this;
     }
 
+    public CacheBuilder type(CacheType type){
+        this.cache.setType(type);
+        return this;
+    }
     public CacheBuilder traceFile(String traceFile){
         this.cache.setTraceFile(traceFile);
         return this;
     }
 
     public Cache build(){
+        if (this.cache.getSize() > 0){
+            int blockCount = this.cache.getSize() / this.cache.getBlockSize();
+            int setCount = blockCount / this.cache.getAssociativity();
+
+            this.cache.setSetCount(setCount);
+            this.cache.setBlockCount(blockCount);
+
+            List<List<CacheBlock>> sets = new ArrayList<>();
+            for (int i = 1; i <= setCount; i++){
+                List<CacheBlock> blocks = new ArrayList<>();
+                sets.add(blocks);
+            };
+            this.cache.setSets(sets);
+        }
         return this.cache;
     }
 }

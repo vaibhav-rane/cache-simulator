@@ -18,6 +18,7 @@ public class sim_cache {
 
         Cache L1 = new CacheBuilder()
                 .builder()
+                .type(CacheType.L1)
                 .blockSize(blockSize)
                 .size(l1Size)
                 .associativity(l1Associativity)
@@ -29,6 +30,7 @@ public class sim_cache {
 
         Cache L2 = new CacheBuilder()
                 .builder()
+                .type(CacheType.L2)
                 .blockSize(blockSize)
                 .size(l2Size)
                 .associativity(l2Associativity)
@@ -37,14 +39,6 @@ public class sim_cache {
                 .traceFile(traceFile)
                 .build();
 
-        L1.setType(CacheType.L1);
-        L2.setType(CacheType.L2);
-
-        if(L2.getSize() > 0){
-            L1.setNextLevelCache(L2);
-            L2.setPrevLevelCache(L1);
-        }
-
         CPU cpu = new CPU();
         cpu.setTraceFile(traceFile);
         cpu.setL1(L1);
@@ -52,13 +46,5 @@ public class sim_cache {
 
         cpu.boot();
         cpu.run();
-
-//        CacheSimulatorBuilder simulatorBuilder = new CacheSimulatorBuilder();
-//        simulatorBuilder
-//                .initSimulation()
-//                .addCache(L1, CacheType.L1)
-//                .addCache(L2, CacheType.L2)
-//                .prepare()
-//                .start();
     }
 }
