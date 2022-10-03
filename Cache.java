@@ -1,6 +1,3 @@
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -22,7 +19,6 @@ public class Cache {
     private ReplacementPolicy replacementPolicy;
     private InclusiveProperty inclusionProperty;
     private int setCount;
-
     private int blockCount;
     private int readCount = 0;
     private int writeCount = 0;

@@ -40,10 +40,12 @@ public class L1LruEvictionProcessor implements EvictionProcessor{
 
     public void issueWriteBackTo(String address, Cache cache){
         cache.setWriteCount(cache.getWriteCount() + 1);
-        if(Objects.isNull(CacheManagerUtils.getBlockAt(address, cache))){
+        CacheBlock blockToWriteBackOn = CacheManagerUtils.getBlockAt(address, cache);
+        if(Objects.isNull(blockToWriteBackOn)){
             //block is not present in the set
             cache.setWriteMissCount(cache.getWriteMissCount() + 1);
             CacheBlock block = CacheManagerUtils.createNewCacheBlockFor(cache, address);
+            block.setDirty(true);
 
             if(CacheManagerUtils.isSetVacantFor(cache, address)){
                 CacheManagerUtils.addBlockToCache(cache, block);
@@ -55,7 +57,12 @@ public class L1LruEvictionProcessor implements EvictionProcessor{
                         .evict(address, cache);
                 CacheManagerUtils.addBlockToCache(cache, block);
             }
-
+        }
+        else {
+            //L2 Write HIT
+            cache.setWriteHitCount(cache.getWriteHitCount() + 1);
+            blockToWriteBackOn.setLastAccess(Constants.blockAccessCounter++);
+            blockToWriteBackOn.setDirty(true);
         }
     }
     @Override

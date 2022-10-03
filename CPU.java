@@ -107,14 +107,20 @@ public class CPU {
     /**
      * Executes Instructions one-by-one*/
     public void run(){
+        int i = 1;
         for (String instruction : instructions){
+            System.out.println("executing: #"+i);
             String operation = CacheManagerUtils.getOperation(instruction);
             String address = CacheManagerUtils.getMemoryAddress(instruction);
 
+            if(i == 212){
+                System.out.println("stop");
+            }
             if (operation.equals(READ))
                 read(address);
             else
                 write(address);
+            i++;
         }
         print();
     }
@@ -203,37 +209,45 @@ public class CPU {
     }
 
     public void write(String address){
-        //write to l1
-        if(isWriteHit(L1, address)){
-            return;
-        }
-        else {
-            //L1 WRITE MISS
-            //checking if the block is present in L2
+        /**
+         * Attempting to WRITE in L1*/
+        boolean writeHit = isWriteHit(L1, address);
+
+        if(! writeHit){
+            /**
+             * L1 WRITE MISS -> READ from L2*/
 
             if(L1.hasNextLevel()){
+
                 L2.setReadCount(L2.getReadCount() + 1);
+
                 CacheBlock blockToWrite = CacheManagerUtils.getBlockAt(address, L2);
                 if ( Objects.nonNull(blockToWrite) ){
-                    //L2 read HIT
+                    /**
+                     * L2 READ HIT*/
                     L2.setReadHitCount(L2.getReadHitCount() + 1);
                     blockToWrite.setLastAccess(Constants.blockAccessCounter++);
 
-                    //allocate block in L1
+                    /**
+                     * Allocating Block in L1*/
                     allocateBlockToL1(address);
                     CacheBlock allocatedBlock = CacheManagerUtils.getBlockAt(address, L1);
                     makeMeDirty(allocatedBlock);
                 }
                 else{
-                    //L1 WRITE MISS L2 READ MISS
+                    /**
+                     * L1 WRITE MISS L2 READ MISS. Allocating Blocks to both L1 and L2 */
                     L2.setReadMissCount(L2.getReadMissCount() + 1);
                     allocateBlockToL2(address);
                     allocateBlockToL1(address);
+
                     CacheBlock allocatedBlock = CacheManagerUtils.getBlockAt(address, L1);
                     makeMeDirty(allocatedBlock);
                 }
             }
             else {
+                /**
+                 * L2 cache not found*/
                 allocateBlockToL1(address);
                 CacheBlock allocatedBlock = CacheManagerUtils.getBlockAt(address, L1);
                 makeMeDirty(allocatedBlock);
@@ -302,7 +316,6 @@ public class CPU {
             CacheManagerUtils.printCacheState(L2);
 
         System.out.println("===== Simulation results (raw) =====");
-
         System.out.println("a. number of L1 reads:        "	+	L1.getReadCount());
         System.out.println("b. number of L1 read misses:  "	+	L1.getReadMissCount());
         System.out.println("c. number of L1 writes:       "	+	L1.getWriteCount());
@@ -316,10 +329,10 @@ public class CPU {
         System.out.println("k. L2 miss rate:              "	+	String.format("%.6f",l2MissRate));
         System.out.println("l. number of L2 writebacks:   "	+	L2.getWriteBackCount());
 
-        int total_traffic = (L1.getReadMissCount() + L1.getWriteMissCount() + L1.getWriteBackCount());
+        int traffic = (L1.getReadMissCount() + L1.getWriteMissCount() + L1.getWriteBackCount());
         if (L2.getSize() !=0) {
-            total_traffic =   L2.getReadMissCount() + L2.getWriteMissCount() + L2.getWriteBackCount() + trafficCounter;
+            traffic =   L2.getReadMissCount() + L2.getWriteMissCount() + L2.getWriteBackCount() + trafficCounter;
         }
-        System.out.println("m. total memory traffic:      "	+	total_traffic);
+        System.out.println("m. total memory traffic:      "	+	traffic);
     }
 }
