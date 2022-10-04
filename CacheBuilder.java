@@ -7,8 +7,10 @@ import java.util.List;
 public class CacheBuilder {
     private Cache cache;
 
+    private EvictionManager evictionManager;
     public CacheBuilder builder(){
         this.cache = new Cache();
+        this.evictionManager = new EvictionManager();
         return this;
     }
 
@@ -70,6 +72,11 @@ public class CacheBuilder {
                 sets.add(blocks);
             };
             this.cache.setSets(sets);
+
+            if (this.cache.getReplacementPolicy().equals(ReplacementPolicy.LRU) || this.cache.getReplacementPolicy().equals(ReplacementPolicy.FIFO))
+                this.cache.setEvictionProcessor(evictionManager.getEvictionProcessorFor(ReplacementPolicy.LRU, this.cache.getType()));
+            else
+                this.cache.setEvictionProcessor(evictionManager.getEvictionProcessorFor(ReplacementPolicy.OPT, this.cache.getType()));
         }
         return this.cache;
     }

@@ -11,9 +11,9 @@ public class EvictionManager {
 
     public EvictionManager() {
         this.evictionProcessorMap = new HashMap<>();
-        this.evictionProcessorMap.put(ReplacementPolicy.LRU, Arrays.asList(new L1LruEvictionProcessor(), new L2LruEvictionProcessor()));
-        this.evictionProcessorMap.put(ReplacementPolicy.PLRU, Arrays.asList(new L1PlruEvictionProcessor()));
-        this.evictionProcessorMap.put(ReplacementPolicy.OPT, Arrays.asList(new L1OptEvictionProcessor()));
+        this.evictionProcessorMap.put(ReplacementPolicy.LRU, Arrays.asList(new L1LruFifoEvictionProcessor(), new L2LruFifoEvictionProcessor()));
+//        this.evictionProcessorMap.put(ReplacementPolicy.FIFO, Arrays.asList(new L1PlruEvictionProcessor()));
+        this.evictionProcessorMap.put(ReplacementPolicy.OPT, Arrays.asList(new L1OptEvictionProcessor(), new L2OptEvictorProcessor()));
     }
 
     public EvictionProcessor getEvictionProcessorFor(ReplacementPolicy policy, CacheType type){

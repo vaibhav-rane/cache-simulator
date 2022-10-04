@@ -14,48 +14,18 @@ public class CPU {
     private List<String> instructions;
     private Cache L1;
     private Cache L2;
-    private EvictionManager evictionManager;
     int trafficCounter = 0;
     private static final String READ = "r";
-
-    public String getTraceFile() {
-        return traceFile;
-    }
 
     public void setTraceFile(String traceFile) {
         this.traceFile = traceFile;
     }
-
-    public List<String> getInstructions() {
-        return instructions;
-    }
-
-    public void setInstructions(List<String> instructions) {
-        this.instructions = instructions;
-    }
-
-    public Cache getL1() {
-        return L1;
-    }
-
     public void setL1(Cache l1) {
         L1 = l1;
     }
 
-    public Cache getL2() {
-        return L2;
-    }
-
     public void setL2(Cache l2) {
         L2 = l2;
-    }
-
-    public EvictionManager getEvictionManager() {
-        return evictionManager;
-    }
-
-    public void setEvictionManager(EvictionManager evictionManager) {
-        this.evictionManager = evictionManager;
     }
 
     public void boot(){
@@ -64,31 +34,6 @@ public class CPU {
             L1.setNextLevelCache(L2);
             L2.setPrevLevelCache(L1);
         }
-
-        /**
-         * Initializing Caches*/
-//        List<Cache> caches = Arrays.asList(L1, L2);
-//
-//        for (Cache cache : caches){
-//
-//            if(cache.getSize() == 0){
-//                //cache.getPrevLevelCache().setNextLevelCache(null);
-//                continue;
-//            }
-//            int blockCount = cache.getSize() / cache.getBlockSize();
-//            int setCount = blockCount / cache.getAssociativity();
-//
-//            cache.setSetCount(setCount);
-//            cache.setBlockCount(blockCount);
-//
-//            List<List<CacheBlock>> sets = new ArrayList<>();
-//            for (int i = 1; i <= setCount; i++){
-//                List<CacheBlock> blocks = new ArrayList<>();
-//                sets.add(blocks);
-//            };
-//            cache.setSets(sets);
-//
-//        }
 
         /**
          * Reading instructions from trace file*/
@@ -104,194 +49,68 @@ public class CPU {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        this.evictionManager = new EvictionManager();
+
+        Constants.preprocessedOPTTrace = new ArrayList<>(instructions);
     }
 
     /**
      * Executes Instructions one-by-one*/
     public void run(){
-        int i = 1;
-        for (String instruction : instructions){
-            System.out.println("executing: #"+i);
+        for (int i = 0; i < instructions.size(); i++){
+            Constants.programCounter = i;
+            //System.out.println("Executing PC: "+Constants.programCounter);
+            String instruction = instructions.get(i);
+
             String operation = CacheManagerUtils.getOperation(instruction);
             String address = CacheManagerUtils.getMemoryAddress(instruction);
 
-            if(i == 212){
-                System.out.println("stop");
-            }
             if (operation.equals(READ))
                 read(address);
             else
                 write(address);
-            i++;
         }
+//        for (String instruction : instructions){
+//            String operation = CacheManagerUtils.getOperation(instruction);
+//            String address = CacheManagerUtils.getMemoryAddress(instruction);
+//
+//            if (operation.equals(READ))
+//                read(address);
+//            else
+//                write(address);
+//        }
         print();
     }
 
     public void read(String address){
-        /**
-         * Reading from L1*/
-        boolean hit = isReadHit(L1, address);
-
-        if(! hit){
-            if(L1.hasNextLevel()){
-                /**
-                 * L1 Read MISS. Reading from L2*/
-                if(isReadHit(L2, address)){
-                    /**
-                     * L2 Read HIT. Allocating block in L1*/
-                    allocateBlockToL1(address);
+        boolean isReadHit = L1.read(address);
+        if (! isReadHit){
+            if (L1.hasNextLevel()){
+                isReadHit = L2.read(address);
+                if (! isReadHit){
+                    L2.allocateBlock(address);
                 }
-                else {
-                    /**
-                     * L1 READ MISS, L2 READ MISS -> Allocating block in both L1 and L2*/
-                    allocateBlockToL2(address);
-                    allocateBlockToL1(address);
-                }
+                L1.allocateBlock(address);
             }
-            else {
-                /**
-                 * No L2 Cache found*/
-                allocateBlockToL1(address);
+            else{
+                L1.allocateBlock(address);
             }
         }
-    }
-
-
-    /**
-     * -Allocates a memory block corresponding to the supplied memory address
-     * -if the target set is full, evicts the block as per the replacement policy
-     * -if the evicted block is dirty, issues a write-back on L2 cache
-     * ----if the block is not present in L2 -> WRITE MISS
-     * ----allocateBlockToL2(address)*/
-    public void allocateBlockToL1(String address){
-        CacheBlock block = CacheManagerUtils.createNewCacheBlockFor(L1, address);
-        if(! CacheManagerUtils.isSetVacantFor(L1, block)){
-            evictionManager
-                    .getEvictionProcessorFor(L1.getReplacementPolicy(), CacheType.L1)
-                    .evict(address, L1);
-        }
-        CacheManagerUtils.addBlockToCache(L1, block);
-    }
-
-    /**
-     * -Allocates a memory block corresponding to the supplied memory address
-     * -if the target set is full, evicts the block as per the replacement policy
-     * -if the evicted block is dirty, issues a write-back on RAM */
-    public void allocateBlockToL2(String address){
-        CacheBlock block = CacheManagerUtils.createNewCacheBlockFor(L2, address);
-        if(! CacheManagerUtils.isSetVacantFor(L2, block) ){
-            evictionManager
-                    .getEvictionProcessorFor(L2.getReplacementPolicy(), CacheType.L2)
-                    .evict(address, L2);
-        }
-        CacheManagerUtils.addBlockToCache(L2, block);
-    }
-
-    /**
-     * Checks if a block for the address already present in the supplied cache
-     * increments the readCounter
-     * if present -> HIT
-     *      updates the access counter
-     *      increments the readHit counter
-     * MISS -> increments the readMiss counter*/
-    public boolean isReadHit(Cache cache, String address){
-        cache.setReadCount(cache.getReadCount() + 1);
-
-        int setIndex = CacheManagerUtils.getSetIndexFor(address, cache);
-        String tag = CacheManagerUtils.getTagFor(address, cache);
-        List<CacheBlock> set = cache.getSetAtIndex(setIndex);
-
-        for (CacheBlock block : set){
-            if (block.getTag().equals(tag)){
-                block.setLastAccess(Constants.blockAccessCounter++);
-                cache.setReadHitCount(cache.getReadHitCount() + 1);
-                return true;
-            }
-        }
-        cache.setReadMissCount(cache.getReadMissCount() + 1);
-        return false;
     }
 
     public void write(String address){
-        /**
-         * Attempting to WRITE in L1*/
-        boolean l1WriteHit = isWriteHit(L1, address);
-
+        boolean l1WriteHit = L1.write(address);
         if(! l1WriteHit){
-            /**
-             * L1 WRITE MISS -> READ from L2*/
-
-            if(L1.hasNextLevel()){
-
-                L2.setReadCount(L2.getReadCount() + 1);
-
-                CacheBlock blockToWrite = CacheManagerUtils.getBlockAt(address, L2);
-                if ( Objects.nonNull(blockToWrite) ){
-                    /**
-                     * L2 READ HIT*/
-                    L2.setReadHitCount(L2.getReadHitCount() + 1);
-                    blockToWrite.setLastAccess(Constants.blockAccessCounter++);
-
-                    /**
-                     * Allocating Block in L1*/
-                    allocateBlockToL1(address);
-                    CacheBlock allocatedBlock = CacheManagerUtils.getBlockAt(address, L1);
-                    makeMeDirty(allocatedBlock);
+            if (L1.hasNextLevel()){
+                boolean l2ReadHit = L2.read(address);
+                if(! l2ReadHit){
+                    L2.allocateBlockAndSetDirty(address);
                 }
-                else{
-                    /**
-                     * L1 WRITE MISS L2 READ MISS. Allocating Blocks to both L1 and L2 */
-                    L2.setReadMissCount(L2.getReadMissCount() + 1);
-                    allocateBlockToL2(address);
-                    allocateBlockToL1(address);
-
-                    CacheBlock allocatedBlock = CacheManagerUtils.getBlockAt(address, L1);
-                    makeMeDirty(allocatedBlock);
-                }
+                L1.allocateBlockAndSetDirty(address);
             }
-            else {
-                /**
-                 * L2 cache not found*/
-                allocateBlockToL1(address);
-                CacheBlock allocatedBlock = CacheManagerUtils.getBlockAt(address, L1);
-                makeMeDirty(allocatedBlock);
+            else{
+                L1.allocateBlockAndSetDirty(address);
             }
         }
-    }
-
-    /**
-     * Attempts to write in cache
-     * increments the writeCounter
-     * if the block is already present -> WRITE HIT
-     *      increments the writeHit count
-     *      makes it dirty.
-     *      updates the block access.
-     *      returns true
-     * else -> WRITE MISS
-     *      increments the writeMiss counter
-     *      returns false
-     * */
-    public boolean isWriteHit(Cache cache, String address){
-        cache.setWriteCount(cache.getWriteCount() + 1);
-
-        CacheBlock blockToWrite = CacheManagerUtils.getBlockAt(address, cache);
-        if ( Objects.nonNull(blockToWrite) ){
-            /**
-             * WRITE HIT*/
-            cache.setWriteHitCount(cache.getWriteHitCount() + 1);
-            makeMeDirty(blockToWrite);
-            blockToWrite.setLastAccess(Constants.blockAccessCounter++);
-            return true;
-        }
-        /**
-         * WRITE MISS*/
-        cache.setWriteMissCount(cache.getWriteMissCount() + 1);
-        return false;
-    }
-
-    public void makeMeDirty(CacheBlock block){
-        block.setDirty(true);
     }
 
     public void print(){

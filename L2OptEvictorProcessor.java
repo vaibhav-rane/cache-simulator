@@ -4,9 +4,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by varane on 10/1/22.
+ * Created by varane on 10/4/22.
  */
-public class L1OptEvictionProcessor implements EvictionProcessor{
+public class L2OptEvictorProcessor implements EvictionProcessor{
     @Override
     public void evict(String address, Cache cache) {
         int setIndex = CacheManagerUtils.getSetIndexFor(address, cache);
@@ -40,27 +40,12 @@ public class L1OptEvictionProcessor implements EvictionProcessor{
         }
 
         CacheBlock evictedBlock = set.get(blockIndexToEvict);
-        if (evictedBlock.isDirty()){
+        if (evictedBlock.isDirty())
             cache.setWriteBackCount(cache.getWriteBackCount() + 1);
-            if (cache.hasNextLevel()){
-                issueWriteBackTo(evictedBlock.getAddress(), cache.getNextLevelCache());
-            }
-        }
-
     }
 
-    public void issueWriteBackTo(String addressOfEvictedBlock, Cache cache){
-
-        boolean isWriteHit = cache.write(addressOfEvictedBlock);
-        if(isWriteHit){
-            return;
-        }
-        else {
-            cache.allocateBlockAndSetDirty(addressOfEvictedBlock);
-        }
-    }
     @Override
     public CacheType getSupportedType() {
-        return CacheType.L1;
+        return CacheType.L2;
     }
 }

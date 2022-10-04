@@ -3,7 +3,7 @@
  */
 public enum ReplacementPolicy {
     LRU(0, "LRU"),
-    PLRU(1, "Pseudo-LRU"),
+    FIFO(1, "FIFO"),
     OPT(2, "Optimal");
 
     ReplacementPolicy(int code, String description) {

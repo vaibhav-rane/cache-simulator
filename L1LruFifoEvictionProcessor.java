@@ -1,0 +1,42 @@
+/**
+ * Created by varane on 10/2/22.
+ */
+
+import java.util.List;
+
+/**
+ * Uses LRU policy to evict a block corresponding to the supplied address from L1 cache
+ * If the evicted block is dirty, issues write-back to L2*/
+public class L1LruFifoEvictionProcessor implements EvictionProcessor{
+    @Override
+    public void evict(String address, Cache cache) {
+        int setIndex = CacheManagerUtils.getSetIndexFor(address, cache);
+        List<CacheBlock> set = CacheManagerUtils.getSetForSetIndex(setIndex, cache);
+
+        int lruBlockIndex = CacheManagerUtils.getLruBlockIndex(address, cache);
+
+        CacheBlock evictedBlock = set.remove(lruBlockIndex);
+
+        if (evictedBlock.isDirty()){
+            cache.setWriteBackCount(cache.getWriteBackCount() + 1);
+            if(cache.hasNextLevel()){
+                issueWriteBackTo(evictedBlock.getAddress(), cache.getNextLevelCache());
+            }
+        }
+    }
+
+    public void issueWriteBackTo(String addressOfEvictedBlock, Cache cache){
+
+        boolean isWriteHit = cache.write(addressOfEvictedBlock);
+        if(isWriteHit){
+            return;
+        }
+        else {
+            cache.allocateBlockAndSetDirty(addressOfEvictedBlock);
+        }
+    }
+    @Override
+    public CacheType getSupportedType() {
+        return CacheType.L1;
+    }
+}

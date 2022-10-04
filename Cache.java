@@ -1,8 +1,6 @@
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.Queue;
+import java.util.Objects;
 import java.util.StringJoiner;
 
 /**
@@ -11,7 +9,6 @@ import java.util.StringJoiner;
  */
 
 public class Cache {
-
     private CacheType type;
     private int blockSize;
     private int size;
@@ -23,37 +20,125 @@ public class Cache {
     private int readCount = 0;
     private int writeCount = 0;
     private int readMissCount = 0;
-
     private int readHitCount = 0;
     private int writeMissCount = 0;
-
     private int writeHitCount = 0;
     private int writeBackCount = 0;
     private String traceFile;
     private List<String> instructions;
     private List<List<CacheBlock>> sets;
     private List<String> opt;
-    int PLRU[][];
-
     private Cache prevLevelCache;
     private Cache nextLevelCache;
 
-    private Map<Integer, Queue<CacheBlock>> setLruQueueMap;
+    private EvictionProcessor evictionProcessor;
     public Cache(){
         this.sets = new ArrayList<>();
-        initializeSets();
     }
 
-    public void initializePLRU(){
-        int tempAssoc = this.associativity;
-        if(this.associativity <2)
-            tempAssoc =2;
-        PLRU = new int [setCount][tempAssoc-1];
-    }
-    public void initializeSets(){
-        if (this.associativity != 0) {
-            this.setCount = ((this.size) /( this.associativity * this.blockSize));
+    /**
+     * Accepts read command from the CPU.
+     * Reads from L1 if the invoking object is of type L1
+     * else reads from L2*/
+    public boolean read(String address){
+        this.readCount++;
+        CacheBlock block = getBlock(address);
+
+        if (Objects.nonNull(block)){
+            /**
+             * READ HIT*/
+            this.readHitCount++;
+            if (this.replacementPolicy.equals(ReplacementPolicy.LRU))
+                block.setLastAccess(Constants.blockAccessCounter++);
+            return true;
         }
+        /**
+         * READ MISS*/
+        this.readMissCount++;
+        return false;
+    }
+
+    /**
+     * Checks if the block with the supplied address present in the cache*/
+    public CacheBlock getBlock(String address){
+        int setIndex = CacheManagerUtils.getSetIndexFor(address, this);
+        String tag = CacheManagerUtils.getTagFor(address, this);
+        List<CacheBlock> set = getSetAt(setIndex);
+        for (CacheBlock block : set){
+            if (block.getTag().equals(tag))
+                return block;
+        }
+        return null;
+    }
+
+    public List<CacheBlock> getSetAt(int setIndex){
+        return this.sets.get(setIndex);
+    }
+
+    public void allocateBlock(String address){
+        CacheBlock block = CacheManagerUtils.createNewCacheBlockFor(this, address);
+        if (isSpaceAvailableFor(block)){
+            addBlock(block);
+        }
+        else{
+            evictionProcessor.evict(address, this);
+            addBlock(block);
+        }
+    }
+
+    public void allocateBlockAndSetDirty(String address){
+        CacheBlock block = CacheManagerUtils.createNewCacheBlockFor(this, address);
+        block.setDirty(true);
+        if (isSpaceAvailableFor(block)){
+            addBlock(block);
+        }
+        else{
+            evictionProcessor.evict(address, this);
+            addBlock(block);
+        }
+    }
+
+    public boolean isSpaceAvailableFor(CacheBlock block){
+        int index = CacheManagerUtils.getSetIndexFor(block.getAddress(), this);
+        List<CacheBlock> set = getSetAt(index);
+        return set.size() < associativity;
+    }
+
+    public void addBlock(CacheBlock block){
+        int index = CacheManagerUtils.getSetIndexFor(block.getAddress(), this);
+        List<CacheBlock> set = getSetAt(index);
+        set.add(block);
+    }
+
+    /**
+     * Accepts write command from CPU.
+     * Reads from the cache
+     * If read is successful -> READ HIT -> returns true
+     * If read is unsuccessful -> READ MISS -> returns false*/
+    public boolean write(String address){
+        this.writeCount++;
+        CacheBlock block = getBlock(address);
+
+        if (Objects.nonNull(block)){
+            /**
+             * WRITE HIT*/
+            this.writeHitCount++;
+
+            if (this.replacementPolicy.equals(ReplacementPolicy.LRU))
+                block.setLastAccess(Constants.blockAccessCounter++);
+            block.setDirty(true);
+            return true;
+        }
+        this.writeMissCount++;
+        return false;
+    }
+
+    public EvictionProcessor getEvictionProcessor() {
+        return evictionProcessor;
+    }
+
+    public void setEvictionProcessor(EvictionProcessor evictionProcessor) {
+        this.evictionProcessor = evictionProcessor;
     }
 
     public int getWriteHitCount() {
@@ -70,14 +155,6 @@ public class Cache {
 
     public void setReadHitCount(int readHitCount) {
         this.readHitCount = readHitCount;
-    }
-
-    public Map<Integer, Queue<CacheBlock>> getSetLruQueueMap() {
-        return setLruQueueMap;
-    }
-
-    public void setSetLruQueueMap(Map<Integer, Queue<CacheBlock>> setLruQueueMap) {
-        this.setLruQueueMap = setLruQueueMap;
     }
 
     public CacheType getType() {
@@ -232,14 +309,6 @@ public class Cache {
         this.opt = opt;
     }
 
-    public int[][] getPLRU() {
-        return PLRU;
-    }
-
-    public void setPLRU(int[][] PLRU) {
-        this.PLRU = PLRU;
-    }
-
     public boolean hasNextLevel(){
         return this.getNextLevelCache() != null;
     }
@@ -263,10 +332,7 @@ public class Cache {
                 .add("writeMissCount=" + writeMissCount)
                 .add("writeBackCount=" + writeBackCount)
                 .add("traceFile='" + traceFile + "'")
-//                .add("inputData=" + instructions.size())
-//                .add("#sets=" + sets.size())
                 .add("opt=" + opt)
-                .add("pLRU=" + Arrays.toString(PLRU))
                 .toString();
     }
 }

@@ -143,7 +143,7 @@ public class CacheManagerUtils {
 
     public static String getMemoryAddress(String instruction){
         String[] instructionComponents = instruction.split(" ");
-        String unformattedMemoryAddress = instructionComponents[1];
+        String unformattedMemoryAddress = instructionComponents[1].trim();
         String memoryAddress = CacheManagerUtils.formatHexAddressTo32BitHexAddress(unformattedMemoryAddress);
         return memoryAddress;
     }
@@ -161,5 +161,45 @@ public class CacheManagerUtils {
         //todo update the access based on policy
         block.setLastAccess(Constants.blockAccessCounter++);
         return block;
+    }
+
+    public static int getLruBlockIndex(String address, Cache cache){
+        int setIndex = CacheManagerUtils.getSetIndexFor(address, cache);
+        List<CacheBlock> set = CacheManagerUtils.getSetForSetIndex(setIndex, cache);
+
+        int lruBlockIndex = -1;
+        int minAccessCounter = Integer.MAX_VALUE;
+
+        for (int i = 0; i < set.size(); i++){
+            CacheBlock block = set.get(i);
+            if ( block.getLastAccess() < minAccessCounter){
+                minAccessCounter = block.getLastAccess();
+                lruBlockIndex = i;
+            }
+        }
+        return lruBlockIndex;
+    }
+
+    public static int getMostRecentFutureDistanceOf(String address){
+        for (int i = Constants.programCounter; i < Constants.preprocessedOPTTrace.size(); i++){
+            String instruction = Constants.preprocessedOPTTrace.get(i);
+            String memoryAddress = CacheManagerUtils.getMemoryAddress(instruction);
+            if (memoryAddress.equals(address))
+                return i;
+        }
+        return Integer.MAX_VALUE;
+    }
+    public static void removeInclusiveBlock(Cache L1, CacheBlock block){
+        int index = getSetIndexFor(block.getAddress(), L1);
+        List<CacheBlock> set = L1.getSets().get(index);
+        int removalIndex = -1;
+        for (int i = 0; i < set.size(); i++){
+            CacheBlock blockAtI = set.get(i);
+            if (blockAtI.getTag().equals(block.getTag())){
+                removalIndex = i;
+                break;
+            }
+        }
+        set.remove(removalIndex);
     }
 }
