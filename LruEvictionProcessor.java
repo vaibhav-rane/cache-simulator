@@ -1,7 +1,4 @@
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Queue;
 
 /**
  * Created by varane on 10/1/22.
@@ -9,7 +6,7 @@ import java.util.Queue;
 public class LruEvictionProcessor implements EvictionProcessor{
 
     @Override
-    public void evict(String address, Cache cache) {
+    public int getEvictionIndex(String address, Cache cache) {
 
         int setIndex = CacheManagerUtils.getSetIndexFor(address, cache);
 
@@ -57,6 +54,7 @@ public class LruEvictionProcessor implements EvictionProcessor{
                 writeBackDirtyBlockToNextLevel(cache, address);
             }
         }
+        return 1;
     }
 
     @Override
@@ -91,7 +89,7 @@ public class LruEvictionProcessor implements EvictionProcessor{
                 writeBlock(L2, address);
             }
             else {
-                evict(address, L2);
+                getEvictionIndex(address, L2);
                 writeBlock(L2, address);
             }
 

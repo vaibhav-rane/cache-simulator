@@ -8,7 +8,7 @@ import java.util.Map;
  */
 public class L1OptEvictionProcessor implements EvictionProcessor{
     @Override
-    public void evict(String address, Cache cache) {
+    public int getEvictionIndex(String address, Cache cache) {
         int setIndex = CacheManagerUtils.getSetIndexFor(address, cache);
         List<CacheBlock> set = CacheManagerUtils.getSetForSetIndex(setIndex, cache);
 
@@ -46,7 +46,7 @@ public class L1OptEvictionProcessor implements EvictionProcessor{
                 issueWriteBackTo(evictedBlock.getAddress(), cache.getNextLevelCache());
             }
         }
-
+        return 1;
     }
 
     public void issueWriteBackTo(String addressOfEvictedBlock, Cache cache){

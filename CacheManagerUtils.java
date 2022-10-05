@@ -202,4 +202,27 @@ public class CacheManagerUtils {
         }
         set.remove(removalIndex);
     }
+
+    public static boolean blockExistsIn(CacheBlock block, Cache cache){
+        CacheBlock inclusiveBlock = CacheManagerUtils.getBlockAt(block.getAddress(), cache);
+        return Objects.nonNull(inclusiveBlock);
+    }
+    public static int getIndexOfBlockInSet(String address, Cache cache) {
+        int setIndex = CacheManagerUtils.getSetIndexFor(address, cache);
+        List<CacheBlock> set = CacheManagerUtils.getSetForSetIndex(setIndex, cache);
+
+        CacheBlock inclusiveBlock = CacheManagerUtils.getBlockAt(address, cache);
+
+        int index = -1;
+        if (Objects.nonNull(inclusiveBlock)) {
+            for (int i = 0; i < set.size(); i++) {
+                CacheBlock blockAtI = set.get(i);
+                if (blockAtI.getTag().equals(inclusiveBlock.getTag())) {
+                    index = i;
+                    break;
+                }
+            }
+        }
+        return index;
+    }
 }

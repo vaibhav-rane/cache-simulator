@@ -9,20 +9,21 @@ import java.util.List;
  * If the evicted block is dirty, issues write-back to L2*/
 public class L1LruFifoEvictionProcessor implements EvictionProcessor{
     @Override
-    public void evict(String address, Cache cache) {
+    public int getEvictionIndex(String address, Cache cache) {
         int setIndex = CacheManagerUtils.getSetIndexFor(address, cache);
         List<CacheBlock> set = CacheManagerUtils.getSetForSetIndex(setIndex, cache);
 
         int lruBlockIndex = CacheManagerUtils.getLruBlockIndex(address, cache);
 
-        CacheBlock evictedBlock = set.remove(lruBlockIndex);
-
-        if (evictedBlock.isDirty()){
-            cache.setWriteBackCount(cache.getWriteBackCount() + 1);
-            if(cache.hasNextLevel()){
-                issueWriteBackTo(evictedBlock.getAddress(), cache.getNextLevelCache());
-            }
-        }
+        return lruBlockIndex;
+//        CacheBlock evictedBlock = set.remove(lruBlockIndex);
+//
+//        if (evictedBlock.isDirty()){
+//            cache.setWriteBackCount(cache.getWriteBackCount() + 1);
+//            if(cache.hasNextLevel()){
+//                issueWriteBackTo(evictedBlock.getAddress(), cache.getNextLevelCache());
+//            }
+//        }
     }
 
     public void issueWriteBackTo(String addressOfEvictedBlock, Cache cache){

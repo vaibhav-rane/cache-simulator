@@ -81,8 +81,41 @@ public class Cache {
             addBlock(block);
         }
         else{
-            evictionProcessor.evict(address, this);
-            addBlock(block);
+            int evictionIndex = evictionProcessor.getEvictionIndex(address, this);
+            replaceBlockAtEvictionIndex(evictionIndex, block);
+            //addBlock(block);
+        }
+    }
+
+    public void replaceBlockAtEvictionIndex(int evictionIndex, CacheBlock replacementBlock){
+        int setIndex = CacheManagerUtils.getSetIndexFor(replacementBlock.getAddress(), this);
+        List<CacheBlock> set = CacheManagerUtils.getSetForSetIndex(setIndex, this);
+        CacheBlock evictedBlock = set.set(evictionIndex, replacementBlock);
+        if (evictedBlock.isDirty()){
+            writeBack(evictedBlock);
+        }
+        if (this.type.equals(CacheType.L2) && inclusionProperty.equals(InclusiveProperty.INCLUSIVE)){
+            ensureInclusiveness(evictedBlock, prevLevelCache);
+        }
+    }
+
+    public void ensureInclusiveness(CacheBlock evictedBlock, Cache lowerLevelCache){
+        if (CacheManagerUtils.blockExistsIn(evictedBlock, lowerLevelCache)){
+            int evictionIndex = CacheManagerUtils.getIndexOfBlockInSet(evictedBlock.getAddress(), lowerLevelCache);
+            if (evictionIndex != -1){
+                //avoid shifting in set after eviction
+            }
+        }
+    }
+
+    public void writeBack(CacheBlock evictedBlock){
+        this.writeBackCount++;
+        if (this.hasNextLevel()){
+            Cache nextLevelCache = this.getNextLevelCache();
+            boolean writeHit = nextLevelCache.write(evictedBlock.getAddress());
+            if (! writeHit){
+                nextLevelCache.allocateBlockAndSetDirty(evictedBlock.getAddress());
+            }
         }
     }
 
@@ -93,8 +126,9 @@ public class Cache {
             addBlock(block);
         }
         else{
-            evictionProcessor.evict(address, this);
-            addBlock(block);
+            int evictionIndex = evictionProcessor.getEvictionIndex(address, this);
+            replaceBlockAtEvictionIndex(evictionIndex, block);
+            //addBlock(block);
         }
     }
 

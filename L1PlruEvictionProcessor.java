@@ -4,8 +4,8 @@
 public class L1PlruEvictionProcessor implements EvictionProcessor{
 
     @Override
-    public void evict(String address, Cache cache) {
-
+    public int getEvictionIndex(String address, Cache cache) {
+        return 1;
     }
 
     @Override
