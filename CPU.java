@@ -3,6 +3,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 
@@ -51,6 +52,20 @@ public class CPU {
         }
 
         Constants.preprocessedOPTTrace = new ArrayList<>(instructions);
+
+        /**
+         * Preparing Map for OPT*/
+        Constants.addressOccurrenceMap = new HashMap<>();
+        int i = 0;
+        for (String instruction : instructions){
+            String address = CacheManagerUtils.getMemoryAddress(instruction);
+            List<Integer> occurrences = Constants.addressOccurrenceMap.get(address);
+            if (Objects.isNull(occurrences)){
+                occurrences = new ArrayList<>();
+                Constants.addressOccurrenceMap.put(address, occurrences);
+            }
+            occurrences.add(i++);
+        }
     }
 
     /**
