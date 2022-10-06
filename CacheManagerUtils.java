@@ -26,6 +26,8 @@ public class CacheManagerUtils {
         String binaryMemoryAddress = CacheManagerUtils.hexToBinary(memoryAddress);
         int tagSize = CacheManagerUtils.getTagSize(cache);
         String tagBits = binaryMemoryAddress.substring(0, tagSize);
+        //todo converting back to hexa tag
+        tagBits = new BigInteger(tagBits, 2).toString(16);
         return tagBits;
     }
 
@@ -50,8 +52,8 @@ public class CacheManagerUtils {
 
     }
 
-    public static String getMSBPaddingFor(String hex){
-        int paddingLength = 32 - hex.length();
+    public static String getMSBPaddingFor(String address){
+        int paddingLength = 32 - address.length();
         if(paddingLength == 0) return "";
         StringBuilder msbPaddingString = new StringBuilder("");
         for (int i = 1; i <= paddingLength; i++){
@@ -60,16 +62,21 @@ public class CacheManagerUtils {
         return msbPaddingString.toString();
     }
 
+    // TODO: 10/4/22 Refactor this 
     public static void printCacheState(Cache cache){
         System.out.println("===== "+cache.getType().name()+" contents =====");
 
         for(int i = 0; i < cache.getSetCount(); i++)
         {
             System.out.print("Set	"+i+": ");
-            List<CacheBlock> set = cache.getSets().get(i);
+            CacheBlock[] set = cache.getSets().get(i);
 
-            for(int j = 0; j <set.size() ; j++) {
-                System.out.print(toHex(set.get(j).getTag()) + " " + (set.get(j).isDirty()?"D":"")+"	");
+            for(int j = 0; j <set.length ; j++) {
+                // TODO: 10/4/22 Null check?
+                //System.out.print(toHex(set[j].getTag()) + " " + (set[j].isDirty()?"D":"")+"	");
+
+                //after making getTag() return hex instead of binary
+                System.out.print(set[j].getTag() + " " + (set[j].isDirty()?"D":"")+"	");
             }
             System.out.println();
         }
@@ -88,36 +95,16 @@ public class CacheManagerUtils {
         return hexStr;
     }
 
-    public static List<CacheBlock> getSetForSetIndex(int setIndex, Cache cache){
+    public static CacheBlock[] getSetForSetIndex(int setIndex, Cache cache){
         return cache.getSets().get(setIndex);
-    }
-
-    public static void write(){
-
-    }
-
-    public static boolean isHit(String address, Cache cache){
-        int setIndex = getSetIndexFor(address, cache);
-        List<CacheBlock> set = getSetForSetIndex(setIndex, cache);
-        if(Objects.isNull(set) || set.isEmpty()){
-            return false;
-        }
-
-        String tag = getTagFor(address, cache);
-        for (CacheBlock block : set){
-            if(block.getTag().equals(tag))
-                return true;
-            block.setLastAccess(Constants.blockAccessCounter++);
-        }
-        return false;
     }
 
     public static CacheBlock getBlockAt(String address, Cache cache){
         int setIndex = getSetIndexFor(address, cache);
         String tag = getTagFor(address, cache);
-        List<CacheBlock> set = getSetForSetIndex(setIndex, cache);
+        CacheBlock[] set = getSetForSetIndex(setIndex, cache);
         for (CacheBlock block : set){
-            if(block.getTag().equals(tag))
+            if(Objects.nonNull(block) && block.getTag().equals(tag))
                 return block;
         }
         return null;
@@ -125,14 +112,24 @@ public class CacheManagerUtils {
 
     public static boolean isSetVacantFor(Cache cache, String address){
         int index = getSetIndexFor(address, cache);
-        List<CacheBlock> set = cache.getSets().get(index);
-        return set.size() < cache.getAssociativity();
+        CacheBlock[] set = cache.getSets().get(index);
+        for (CacheBlock block : set){
+            if (Objects.isNull(block)){
+                return true;
+            }
+        }
+        return false;
     }
 
     public static boolean isSetVacantFor(Cache cache, CacheBlock block){
         int index = getSetIndexFor(block.getAddress(), cache);
-        List<CacheBlock> set = cache.getSets().get(index);
-        return set.size() < cache.getAssociativity();
+        CacheBlock[] set = cache.getSets().get(index);
+        for (CacheBlock cb : set){
+            if (Objects.isNull(cb)){
+                return true;
+            }
+        }
+        return false;
     }
 
     public static String getOperation(String instruction){
@@ -149,8 +146,14 @@ public class CacheManagerUtils {
     }
 
     public static void addBlockToCache(Cache cache, CacheBlock block){
-        List<CacheBlock> targetSet = cache.getSetAtIndex(getSetIndexFor(block.getAddress(), cache));
-        targetSet.add(block);
+        CacheBlock[] targetSet = cache.getSetAtIndex(getSetIndexFor(block.getAddress(), cache));
+        for (int i = 0; i < targetSet.length; i++){
+            CacheBlock cb = targetSet[i];
+            if (Objects.isNull(cb)){
+                targetSet[i] = block;
+                break;
+            }
+        }
     }
 
     public static CacheBlock createNewCacheBlockFor(Cache cache, String address){
@@ -165,13 +168,13 @@ public class CacheManagerUtils {
 
     public static int getLruBlockIndex(String address, Cache cache){
         int setIndex = CacheManagerUtils.getSetIndexFor(address, cache);
-        List<CacheBlock> set = CacheManagerUtils.getSetForSetIndex(setIndex, cache);
+        CacheBlock[] set = CacheManagerUtils.getSetForSetIndex(setIndex, cache);
 
         int lruBlockIndex = -1;
         int minAccessCounter = Integer.MAX_VALUE;
 
-        for (int i = 0; i < set.size(); i++){
-            CacheBlock block = set.get(i);
+        for (int i = 0; i < set.length; i++){
+            CacheBlock block = set[i];
             if ( block.getLastAccess() < minAccessCounter){
                 minAccessCounter = block.getLastAccess();
                 lruBlockIndex = i;
@@ -180,6 +183,7 @@ public class CacheManagerUtils {
         return lruBlockIndex;
     }
 
+    // TODO: 10/5/22 To Review
     public static int getMostRecentFutureDistanceOf(String address){
         for (int i = Constants.programCounter; i < Constants.preprocessedOPTTrace.size(); i++){
             String instruction = Constants.preprocessedOPTTrace.get(i);
@@ -191,16 +195,16 @@ public class CacheManagerUtils {
     }
     public static void removeInclusiveBlock(Cache L1, CacheBlock block){
         int index = getSetIndexFor(block.getAddress(), L1);
-        List<CacheBlock> set = L1.getSets().get(index);
+        CacheBlock[] set = L1.getSets().get(index);
         int removalIndex = -1;
-        for (int i = 0; i < set.size(); i++){
-            CacheBlock blockAtI = set.get(i);
+        for (int i = 0; i < set.length; i++){
+            CacheBlock blockAtI = set[i];
             if (blockAtI.getTag().equals(block.getTag())){
                 removalIndex = i;
                 break;
             }
         }
-        set.remove(removalIndex);
+        set[removalIndex] = null;
     }
 
     public static boolean blockExistsIn(CacheBlock block, Cache cache){
@@ -209,18 +213,17 @@ public class CacheManagerUtils {
     }
     public static int getIndexOfBlockInSet(String address, Cache cache) {
         int setIndex = CacheManagerUtils.getSetIndexFor(address, cache);
-        List<CacheBlock> set = CacheManagerUtils.getSetForSetIndex(setIndex, cache);
+        CacheBlock[] set = CacheManagerUtils.getSetForSetIndex(setIndex, cache);
 
-        CacheBlock inclusiveBlock = CacheManagerUtils.getBlockAt(address, cache);
-
+        //CacheBlock inclusiveBlock = CacheManagerUtils.getBlockAt(address, cache);
+        String tag = getTagFor(address, cache);
         int index = -1;
-        if (Objects.nonNull(inclusiveBlock)) {
-            for (int i = 0; i < set.size(); i++) {
-                CacheBlock blockAtI = set.get(i);
-                if (blockAtI.getTag().equals(inclusiveBlock.getTag())) {
-                    index = i;
-                    break;
-                }
+
+        for (int i = 0; i < set.length; i++) {
+            CacheBlock blockAtI = set[i];
+            if (blockAtI.getTag().equals(tag)) {
+                index = i;
+                break;
             }
         }
         return index;

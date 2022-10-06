@@ -2,6 +2,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Created by varane on 10/4/22.
@@ -10,40 +11,52 @@ public class L2OptEvictorProcessor implements EvictionProcessor{
     @Override
     public int getEvictionIndex(String address, Cache cache) {
         int setIndex = CacheManagerUtils.getSetIndexFor(address, cache);
-        List<CacheBlock> set = CacheManagerUtils.getSetForSetIndex(setIndex, cache);
+        CacheBlock[] set = CacheManagerUtils.getSetForSetIndex(setIndex, cache);
 
-        Map<Integer, Integer> setIndexFutureMap = new HashMap<>();
-        List<Integer> neverUsedIndexes = new ArrayList<>();
-        for (int i = 0; i < set.size(); i++){
-            CacheBlock block = set.get(i);
-            int futureDistance = CacheManagerUtils.getMostRecentFutureDistanceOf(block.getAddress());
-            if (futureDistance == Integer.MAX_VALUE)
-                neverUsedIndexes.add(i);
-            setIndexFutureMap.put(i, futureDistance);
-        }
+        Map<Integer, Integer> blockIndexFutureDistanceMap = new HashMap<>();
 
-        int blockIndexToEvict = 0;
+        for (int i = 0; i < set.length; i++){
+            CacheBlock block = set[i];
+            String blockAddress = block.getAddress();
 
-        if (neverUsedIndexes.isEmpty()){
-            int farthestDistanceFromPC = 0;
+            /**
+             * Getting all the future occurrences of this block*/
+            List<Integer> futureOccurrencesOfBlockAddress = Constants.addressOccurrenceMap.get(blockAddress);
 
-            for (Map.Entry<Integer, Integer> entry : setIndexFutureMap.entrySet()){
-                int distance = entry.getValue();
-                if (distance > farthestDistanceFromPC){
-                    farthestDistanceFromPC = distance;
-                    blockIndexToEvict = entry.getKey();
+            /**
+             * If there are no future occurrences, this block will never be needed -> ideal for eviction.*/
+            if (Objects.isNull(futureOccurrencesOfBlockAddress) || futureOccurrencesOfBlockAddress.isEmpty()){
+                return i;
+            }
+            else{
+                int occurrence = Integer.MAX_VALUE;
+
+                for (Integer futureOccurrence : futureOccurrencesOfBlockAddress){
+                    /**
+                     * We are only interested in the first future occurrence after the current PC*/
+                    if (futureOccurrence < Constants.programCounter)
+                        continue;
+                    else{
+                        occurrence = futureOccurrence;
+                        break;
+                    }
                 }
+                blockIndexFutureDistanceMap.put(i, occurrence);
             }
         }
-        else {
-            blockIndexToEvict = neverUsedIndexes.get(0);
+
+        int farthestBlockDistance = Integer.MIN_VALUE;
+        int evictionIndex = -1;
+        for (Map.Entry<Integer, Integer> entry : blockIndexFutureDistanceMap.entrySet()){
+            int blockIndex = entry.getKey();
+            int blockDistance = entry.getValue();
+
+            if (blockDistance > farthestBlockDistance){
+                farthestBlockDistance = blockDistance;
+                evictionIndex = blockIndex;
+            }
         }
-
-        CacheBlock evictedBlock = set.get(blockIndexToEvict);
-        if (evictedBlock.isDirty())
-            cache.setWriteBackCount(cache.getWriteBackCount() + 1);
-
-        return 1;
+        return evictionIndex;
     }
 
     @Override

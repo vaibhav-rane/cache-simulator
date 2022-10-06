@@ -26,7 +26,7 @@ public class Cache {
     private int writeBackCount = 0;
     private String traceFile;
     private List<String> instructions;
-    private List<List<CacheBlock>> sets;
+    private List<CacheBlock[]> sets;
     private List<String> opt;
     private Cache prevLevelCache;
     private Cache nextLevelCache;
@@ -41,19 +41,39 @@ public class Cache {
      * Reads from L1 if the invoking object is of type L1
      * else reads from L2*/
     public boolean read(String address){
+        //----------DEBUG START-----------
+        String tag = CacheManagerUtils.getTagFor(address, this);
+        int setIndex = CacheManagerUtils.getSetIndexFor(address, this);
+        System.out.println(type.name()+" read : "+address+" (tag "+tag+", index "+setIndex+")");
+
+        //----------DEBUG END-----------
+
+
         this.readCount++;
         CacheBlock block = getBlock(address);
 
         if (Objects.nonNull(block)){
             /**
              * READ HIT*/
+            //----------DEBUG START-----------
+            System.out.println(type.name()+" hit");
+            //----------DEBUG END-----------
+
             this.readHitCount++;
-            if (this.replacementPolicy.equals(ReplacementPolicy.LRU))
+            if (this.replacementPolicy.equals(ReplacementPolicy.LRU)){
+                //----------DEBUG START-----------
+                System.out.println(type.name()+" update LRU");
+                //----------DEBUG END-----------
                 block.setLastAccess(Constants.blockAccessCounter++);
+            }
+
             return true;
         }
         /**
          * READ MISS*/
+        //----------DEBUG START-----------
+        System.out.println(type.name()+" miss");
+        //----------DEBUG END-----------
         this.readMissCount++;
         return false;
     }
@@ -63,21 +83,24 @@ public class Cache {
     public CacheBlock getBlock(String address){
         int setIndex = CacheManagerUtils.getSetIndexFor(address, this);
         String tag = CacheManagerUtils.getTagFor(address, this);
-        List<CacheBlock> set = getSetAt(setIndex);
+        CacheBlock[] set = getSetAt(setIndex);
         for (CacheBlock block : set){
-            if (block.getTag().equals(tag))
+            if (Objects.nonNull(block) && block.getTag().equals(tag))
                 return block;
         }
         return null;
     }
 
-    public List<CacheBlock> getSetAt(int setIndex){
+    public CacheBlock[] getSetAt(int setIndex){
         return this.sets.get(setIndex);
     }
 
     public void allocateBlock(String address){
         CacheBlock block = CacheManagerUtils.createNewCacheBlockFor(this, address);
         if (isSpaceAvailableFor(block)){
+            //----------DEBUG START-----------
+            System.out.println(type.name()+ " victim: none");
+            //----------DEBUG END-----------
             addBlock(block);
         }
         else{
@@ -85,12 +108,21 @@ public class Cache {
             replaceBlockAtEvictionIndex(evictionIndex, block);
             //addBlock(block);
         }
+        //----------DEBUG START-----------
+        System.out.println(getType().name()+ " update LRU");
+        //----------DEBUG END-----------
     }
 
     public void replaceBlockAtEvictionIndex(int evictionIndex, CacheBlock replacementBlock){
         int setIndex = CacheManagerUtils.getSetIndexFor(replacementBlock.getAddress(), this);
-        List<CacheBlock> set = CacheManagerUtils.getSetForSetIndex(setIndex, this);
-        CacheBlock evictedBlock = set.set(evictionIndex, replacementBlock);
+        CacheBlock[] set = CacheManagerUtils.getSetForSetIndex(setIndex, this);
+        CacheBlock evictedBlock = set[evictionIndex];
+        //----------DEBUG START-----------
+        System.out.println(type.name()+ " victim "+evictedBlock.getAddress()+" (tag "+evictedBlock.getTag()+", index "+evictionIndex+", dirty "+evictedBlock.isDirty()+")");
+        //----------DEBUG END-----------
+
+        set[evictionIndex] = replacementBlock;
+        //CacheBlock evictedBlock = set.set(evictionIndex, replacementBlock);
         if (evictedBlock.isDirty()){
             writeBack(evictedBlock);
         }
@@ -99,15 +131,33 @@ public class Cache {
         }
     }
 
-    public void ensureInclusiveness(CacheBlock evictedBlock, Cache lowerLevelCache){
-        if (CacheManagerUtils.blockExistsIn(evictedBlock, lowerLevelCache)){
-            int evictionIndex = CacheManagerUtils.getIndexOfBlockInSet(evictedBlock.getAddress(), lowerLevelCache);
+    public void ensureInclusiveness(CacheBlock evictedBlockFromL2, Cache L1){
+        if (CacheManagerUtils.blockExistsIn(evictedBlockFromL2, L1)){
+            int evictionIndex = CacheManagerUtils.getIndexOfBlockInSet(evictedBlockFromL2.getAddress(), L1);
+
             if (evictionIndex != -1){
-                //avoid shifting in set after eviction
+                // TODO: 10/5/22 Recheck on failure
+                int setIndex = CacheManagerUtils.getSetIndexFor(evictedBlockFromL2.getAddress(), L1);
+                CacheBlock[] set = CacheManagerUtils.getSetForSetIndex(setIndex, L1);
+                CacheBlock evictedBlock = set[evictionIndex];
+
+                //----------DEBUG START-----------
+                System.out.println(type.name()+ " victim "+evictedBlock.getAddress()+" (tag "+evictedBlock.getTag()+", index "+evictionIndex+", dirty "+evictedBlock.isDirty()+")");
+                //----------DEBUG END-----------
+
+                set[evictionIndex] = null;
+
+                if (evictedBlock.isDirty()){
+                    L1.setWriteBackCount(L1.getWriteBackCount() + 1);
+                }
             }
         }
     }
 
+    /**
+     * If the next level cache exists, attempts to write evicted block from this level cache to the next level cache.
+     * if there is a WRITE MISS on the next level, allocates a new block to next level and marks it dirty.
+     * */
     public void writeBack(CacheBlock evictedBlock){
         this.writeBackCount++;
         if (this.hasNextLevel()){
@@ -123,6 +173,9 @@ public class Cache {
         CacheBlock block = CacheManagerUtils.createNewCacheBlockFor(this, address);
         block.setDirty(true);
         if (isSpaceAvailableFor(block)){
+            //----------DEBUG START-----------
+            System.out.println(type.name()+ " victim: none");
+            //----------DEBUG END-----------
             addBlock(block);
         }
         else{
@@ -130,18 +183,35 @@ public class Cache {
             replaceBlockAtEvictionIndex(evictionIndex, block);
             //addBlock(block);
         }
+        //----------DEBUG START-----------
+        System.out.println(getType().name()+ " update LRU");
+        //----------DEBUG END-----------
     }
 
     public boolean isSpaceAvailableFor(CacheBlock block){
         int index = CacheManagerUtils.getSetIndexFor(block.getAddress(), this);
-        List<CacheBlock> set = getSetAt(index);
-        return set.size() < associativity;
+        CacheBlock[] set = getSetAt(index);
+        for (CacheBlock cb : set){
+            if (Objects.isNull(cb))
+                return true;
+        }
+        return false;
     }
 
+    /**
+     * Use isSpaceAvailableFor before invoking this*/
     public void addBlock(CacheBlock block){
-        int index = CacheManagerUtils.getSetIndexFor(block.getAddress(), this);
-        List<CacheBlock> set = getSetAt(index);
-        set.add(block);
+        int setIndex = CacheManagerUtils.getSetIndexFor(block.getAddress(), this);
+        CacheBlock[] set = getSetAt(setIndex);
+        /**
+         * find first null block and allocate there*/
+        for (int i = 0; i < set.length; i++){
+            CacheBlock cb = set[i];
+            if (Objects.isNull(cb)){
+                set[i] = block;
+                break;
+            }
+        }
     }
 
     /**
@@ -150,19 +220,35 @@ public class Cache {
      * If read is successful -> READ HIT -> returns true
      * If read is unsuccessful -> READ MISS -> returns false*/
     public boolean write(String address){
+        //----------DEBUG START-----------
+        System.out.println(type.name()+ " write : "+address+" (tag "+CacheManagerUtils.getTagFor(address, this)+", index "+CacheManagerUtils.getSetIndexFor(address, this)+")");
+        //----------DEBUG END-----------
         this.writeCount++;
         CacheBlock block = getBlock(address);
 
         if (Objects.nonNull(block)){
+            //----------DEBUG START-----------
+            System.out.println(type.name()+ " hit");
+            //----------DEBUG END-----------
             /**
              * WRITE HIT*/
             this.writeHitCount++;
 
-            if (this.replacementPolicy.equals(ReplacementPolicy.LRU))
+            if (this.replacementPolicy.equals(ReplacementPolicy.LRU)){
                 block.setLastAccess(Constants.blockAccessCounter++);
+                //----------DEBUG START-----------
+                System.out.println(type.name()+ " update LRU");
+                //----------DEBUG END-----------
+            }
             block.setDirty(true);
+            //----------DEBUG START-----------
+            System.out.println(type.name()+ " set dirty");
+            //----------DEBUG END-----------
             return true;
         }
+        //----------DEBUG START-----------
+        System.out.println(type.name()+ " miss");
+        //----------DEBUG END-----------
         this.writeMissCount++;
         return false;
     }
@@ -327,11 +413,11 @@ public class Cache {
         this.instructions = instructions;
     }
 
-    public List<List<CacheBlock>> getSets() {
+    public List<CacheBlock[]> getSets() {
         return sets;
     }
 
-    public void setSets(List<List<CacheBlock>> sets) {
+    public void setSets(List<CacheBlock[]> sets) {
         this.sets = sets;
     }
 
@@ -347,7 +433,7 @@ public class Cache {
         return this.getNextLevelCache() != null;
     }
 
-    public List<CacheBlock> getSetAtIndex(int setIndex){
+    public CacheBlock[] getSetAtIndex(int setIndex){
         return this.sets.get(setIndex);
     }
     @Override

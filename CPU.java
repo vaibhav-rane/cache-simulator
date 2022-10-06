@@ -79,10 +79,21 @@ public class CPU {
             String operation = CacheManagerUtils.getOperation(instruction);
             String address = CacheManagerUtils.getMemoryAddress(instruction);
 
-            if (operation.equals(READ))
+            System.out.println("----------------------------------------");
+            //System.out.println("# "+(i+1));
+
+            if (operation.equals(READ)){
+                System.out.println("# "+(i+1)+" : read "+address);
                 read(address);
-            else
+            }
+            else{
+                System.out.println("# "+(i+1)+" : write "+address);
                 write(address);
+            }
+            // TODO: 10/5/22 remove after testing
+            if (i == 102){
+                System.out.println("");
+            }
         }
 //        for (String instruction : instructions){
 //            String operation = CacheManagerUtils.getOperation(instruction);

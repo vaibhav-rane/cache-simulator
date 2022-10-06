@@ -11,7 +11,7 @@ public class L1LruFifoEvictionProcessor implements EvictionProcessor{
     @Override
     public int getEvictionIndex(String address, Cache cache) {
         int setIndex = CacheManagerUtils.getSetIndexFor(address, cache);
-        List<CacheBlock> set = CacheManagerUtils.getSetForSetIndex(setIndex, cache);
+        CacheBlock[] set = CacheManagerUtils.getSetForSetIndex(setIndex, cache);
 
         int lruBlockIndex = CacheManagerUtils.getLruBlockIndex(address, cache);
 
@@ -24,17 +24,6 @@ public class L1LruFifoEvictionProcessor implements EvictionProcessor{
 //                issueWriteBackTo(evictedBlock.getAddress(), cache.getNextLevelCache());
 //            }
 //        }
-    }
-
-    public void issueWriteBackTo(String addressOfEvictedBlock, Cache cache){
-
-        boolean isWriteHit = cache.write(addressOfEvictedBlock);
-        if(isWriteHit){
-            return;
-        }
-        else {
-            cache.allocateBlockAndSetDirty(addressOfEvictedBlock);
-        }
     }
     @Override
     public CacheType getSupportedType() {

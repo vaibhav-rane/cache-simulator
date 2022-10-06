@@ -9,7 +9,7 @@ public class L2LruFifoEvictionProcessor implements EvictionProcessor{
     @Override
     public int getEvictionIndex(String address, Cache cache) {
         int setIndex = CacheManagerUtils.getSetIndexFor(address, cache);
-        List<CacheBlock> set = CacheManagerUtils.getSetForSetIndex(setIndex, cache);
+        CacheBlock[] set = CacheManagerUtils.getSetForSetIndex(setIndex, cache);
 
         int lruBlockIndex = CacheManagerUtils.getLruBlockIndex(address, cache);
         return lruBlockIndex;

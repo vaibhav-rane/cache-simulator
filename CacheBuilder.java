@@ -66,10 +66,10 @@ public class CacheBuilder {
             this.cache.setSetCount(setCount);
             this.cache.setBlockCount(blockCount);
 
-            List<List<CacheBlock>> sets = new ArrayList<>();
+            List<CacheBlock[]> sets = new ArrayList<>();
             for (int i = 1; i <= setCount; i++){
-                List<CacheBlock> blocks = new ArrayList<>();
-                sets.add(blocks);
+                CacheBlock[] set = new CacheBlock[this.cache.getAssociativity()];
+                sets.add(set);
             };
             this.cache.setSets(sets);
 
