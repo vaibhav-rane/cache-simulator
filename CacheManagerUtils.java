@@ -221,7 +221,7 @@ public class CacheManagerUtils {
 
         for (int i = 0; i < set.length; i++) {
             CacheBlock blockAtI = set[i];
-            if (blockAtI.getTag().equals(tag)) {
+            if (Objects.nonNull(blockAtI) && blockAtI.getTag().equals(tag)) {
                 index = i;
                 break;
             }

@@ -2,7 +2,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
@@ -84,59 +83,20 @@ public class CPU {
 
             if (operation.equals(READ)){
                 System.out.println("# "+(i+1)+" : read "+address);
-                read(address);
+                //read(address);
+                L1.read(address);
             }
             else{
                 System.out.println("# "+(i+1)+" : write "+address);
-                write(address);
+                //write(address);
+                L1.write(address);
             }
             // TODO: 10/5/22 remove after testing
             if (i == 102){
                 System.out.println("");
             }
         }
-//        for (String instruction : instructions){
-//            String operation = CacheManagerUtils.getOperation(instruction);
-//            String address = CacheManagerUtils.getMemoryAddress(instruction);
-//
-//            if (operation.equals(READ))
-//                read(address);
-//            else
-//                write(address);
-//        }
         print();
-    }
-
-    public void read(String address){
-        boolean isReadHit = L1.read(address);
-        if (! isReadHit){
-            if (L1.hasNextLevel()){
-                isReadHit = L2.read(address);
-                if (! isReadHit){
-                    L2.allocateBlock(address);
-                }
-                L1.allocateBlock(address);
-            }
-            else{
-                L1.allocateBlock(address);
-            }
-        }
-    }
-
-    public void write(String address){
-        boolean l1WriteHit = L1.write(address);
-        if(! l1WriteHit){
-            if (L1.hasNextLevel()){
-                boolean l2ReadHit = L2.read(address);
-                if(! l2ReadHit){
-                    L2.allocateBlockAndSetDirty(address);
-                }
-                L1.allocateBlockAndSetDirty(address);
-            }
-            else{
-                L1.allocateBlockAndSetDirty(address);
-            }
-        }
     }
 
     public void print(){

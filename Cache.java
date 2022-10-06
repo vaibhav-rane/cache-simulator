@@ -36,50 +36,188 @@ public class Cache {
         this.sets = new ArrayList<>();
     }
 
-    /**
-     * Accepts read command from the CPU.
-     * Reads from L1 if the invoking object is of type L1
-     * else reads from L2*/
-    public boolean read(String address){
+
+    public boolean read (String address){
         //----------DEBUG START-----------
         String tag = CacheManagerUtils.getTagFor(address, this);
         int setIndex = CacheManagerUtils.getSetIndexFor(address, this);
         System.out.println(type.name()+" read : "+address+" (tag "+tag+", index "+setIndex+")");
-
         //----------DEBUG END-----------
-
 
         this.readCount++;
         CacheBlock block = getBlock(address);
-
         if (Objects.nonNull(block)){
-            /**
-             * READ HIT*/
+            // READ HIT
+
             //----------DEBUG START-----------
             System.out.println(type.name()+" hit");
             //----------DEBUG END-----------
 
-            this.readHitCount++;
+            readHitCount++;
+
             if (this.replacementPolicy.equals(ReplacementPolicy.LRU)){
                 //----------DEBUG START-----------
                 System.out.println(type.name()+" update LRU");
                 //----------DEBUG END-----------
+
                 block.setLastAccess(Constants.blockAccessCounter++);
             }
-
             return true;
         }
-        /**
-         * READ MISS*/
-        //----------DEBUG START-----------
-        System.out.println(type.name()+" miss");
-        //----------DEBUG END-----------
-        this.readMissCount++;
+        else {
+            //READ MISS
+
+            //----------DEBUG START-----------
+            System.out.println(type.name()+" miss");
+            //----------DEBUG END-----------
+
+            readMissCount++;
+
+            /**
+             * Ensuring free space for the block coming from the next memory level*/
+            ensureBlockSpace(address);
+
+            if (hasNextLevel()){
+                nextLevelCache.read(address);
+            }
+
+            CacheBlock blockFromNextLevel = CacheManagerUtils.createNewCacheBlockFor(this, address);
+            allocateBlockV2(blockFromNextLevel);
+        }
         return false;
     }
 
     /**
-     * Checks if the block with the supplied address present in the cache*/
+     * -Ensures block space for the future incoming block corresponding to the supplied address.
+     * -Does nothing if the space is available for the block in the target set.
+     * -If the target set is full, performs eviction based on the replacement policy.
+     * -If the cache has a next level cache, issues a write-back to the next level cache.
+     * */
+    public void ensureBlockSpace ( String address ){
+        boolean spaceAvailable = isSpaceAvailableFor(address);
+
+        if (spaceAvailable) {
+            //----------DEBUG START-----------
+            System.out.println(type.name()+ " victim: none");
+            //----------DEBUG END-----------
+            return;
+        }
+        else {
+            /**
+             * Making space for the future block coming from the next memory level.
+             * Preparing for Eviction*/
+            int setIndex = CacheManagerUtils.getSetIndexFor(address, this);
+            CacheBlock[] targetSet = CacheManagerUtils.getSetForSetIndex(setIndex, this);
+
+            int evictionIndex = evictionProcessor.getEvictionIndex(address, this);
+
+            CacheBlock evictedBlock = targetSet[evictionIndex];
+
+            //----------DEBUG START-----------
+            System.out.println(type.name()+ " victim "+evictedBlock.getAddress()+" (tag "+evictedBlock.getTag()+", index "+evictionIndex+", dirty "+evictedBlock.isDirty()+")");
+            //----------DEBUG END-----------
+
+            /**
+             * Eviction completed*/
+            targetSet[evictionIndex] = null;
+
+            /**
+             * Checking if write-back to the next level is needed*/
+            if ( evictedBlock.isDirty() ) {
+                writeBackV2(evictedBlock);
+            }
+
+            if (this.type.equals(CacheType.L2) && this.inclusionProperty.equals(InclusiveProperty.INCLUSIVE)){
+                ensureInclusiveness(evictedBlock, this.getPrevLevelCache());
+            }
+        }
+    }
+
+    // TODO: 10/6/22 Review after writeV2()
+    public void writeBackV2(CacheBlock evictedBlock){
+        this.writeBackCount++;
+        if (this.hasNextLevel()){
+            Cache nextLevelCache = this.getNextLevelCache();
+            nextLevelCache.write(evictedBlock.getAddress());
+        }
+    }
+
+    public boolean write (String address){
+        //----------DEBUG START-----------
+        System.out.println(type.name()+ " write : "+address+" (tag "+CacheManagerUtils.getTagFor(address, this)+", index "+CacheManagerUtils.getSetIndexFor(address, this)+")");
+        //----------DEBUG END-----------
+
+        this.writeCount++;
+
+        CacheBlock block = getBlock(address);
+
+        if (Objects.nonNull(block)){
+            //----------DEBUG START-----------
+            System.out.println(type.name()+ " hit");
+            //----------DEBUG END-----------
+
+            /**
+             * WRITE HIT*/
+            this.writeHitCount++;
+
+            if (this.replacementPolicy.equals(ReplacementPolicy.LRU)){
+                block.setLastAccess(Constants.blockAccessCounter++);
+
+                //----------DEBUG START-----------
+                System.out.println(type.name()+ " update LRU");
+                //----------DEBUG END-----------
+            }
+
+            block.setDirty(true);
+
+            //----------DEBUG START-----------
+            System.out.println(type.name()+ " set dirty");
+            //----------DEBUG END-----------
+
+            return true;
+        }
+        else {
+            //WRITE MISS
+            //----------DEBUG START-----------
+            System.out.println(type.name()+ " miss");
+            //----------DEBUG END-----------
+
+            this.writeMissCount++;
+
+            /**
+             * Ensuring free space for the block coming from the next memory level*/
+            ensureBlockSpace(address);
+
+            if (hasNextLevel()){
+                nextLevelCache.read(address);
+            }
+            CacheBlock cacheBlockFromNextLevel = CacheManagerUtils.createNewCacheBlockFor(this, address);
+
+            //----------DEBUG START-----------
+            System.out.println(type.name()+ " set dirty");
+            //----------DEBUG END-----------
+
+            cacheBlockFromNextLevel.setDirty(true);
+
+            allocateBlockV2(cacheBlockFromNextLevel);
+        }
+        return false;
+    }
+
+    /**
+     * Adds the supplied block to the first available index in the appropriate set of the invoking cache.*/
+    public void allocateBlockV2(CacheBlock block){
+        int setIndex = CacheManagerUtils.getSetIndexFor(block.getAddress(), this);
+        CacheBlock[] targetSet = CacheManagerUtils.getSetForSetIndex(setIndex, this);
+        for (int i = 0; i < targetSet.length; i++) {
+            if (Objects.isNull(targetSet[i])){
+                targetSet[i] = block;
+                break;
+            }
+        }
+    }
+    /**
+     * Checks if the block with the supplied address present in the invoking cache*/
     public CacheBlock getBlock(String address){
         int setIndex = CacheManagerUtils.getSetIndexFor(address, this);
         String tag = CacheManagerUtils.getTagFor(address, this);
@@ -93,24 +231,6 @@ public class Cache {
 
     public CacheBlock[] getSetAt(int setIndex){
         return this.sets.get(setIndex);
-    }
-
-    public void allocateBlock(String address){
-        CacheBlock block = CacheManagerUtils.createNewCacheBlockFor(this, address);
-        if (isSpaceAvailableFor(block)){
-            //----------DEBUG START-----------
-            System.out.println(type.name()+ " victim: none");
-            //----------DEBUG END-----------
-            addBlock(block);
-        }
-        else{
-            int evictionIndex = evictionProcessor.getEvictionIndex(address, this);
-            replaceBlockAtEvictionIndex(evictionIndex, block);
-            //addBlock(block);
-        }
-        //----------DEBUG START-----------
-        System.out.println(getType().name()+ " update LRU");
-        //----------DEBUG END-----------
     }
 
     public void replaceBlockAtEvictionIndex(int evictionIndex, CacheBlock replacementBlock){
@@ -198,6 +318,16 @@ public class Cache {
         return false;
     }
 
+    public boolean isSpaceAvailableFor(String address){
+        int setIndex = CacheManagerUtils.getSetIndexFor(address, this);
+        CacheBlock[] set = getSetAt(setIndex);
+        for (CacheBlock cb : set){
+            if (Objects.isNull(cb))
+                return true;
+        }
+        return false;
+    }
+
     /**
      * Use isSpaceAvailableFor before invoking this*/
     public void addBlock(CacheBlock block){
@@ -213,46 +343,6 @@ public class Cache {
             }
         }
     }
-
-    /**
-     * Accepts write command from CPU.
-     * Reads from the cache
-     * If read is successful -> READ HIT -> returns true
-     * If read is unsuccessful -> READ MISS -> returns false*/
-    public boolean write(String address){
-        //----------DEBUG START-----------
-        System.out.println(type.name()+ " write : "+address+" (tag "+CacheManagerUtils.getTagFor(address, this)+", index "+CacheManagerUtils.getSetIndexFor(address, this)+")");
-        //----------DEBUG END-----------
-        this.writeCount++;
-        CacheBlock block = getBlock(address);
-
-        if (Objects.nonNull(block)){
-            //----------DEBUG START-----------
-            System.out.println(type.name()+ " hit");
-            //----------DEBUG END-----------
-            /**
-             * WRITE HIT*/
-            this.writeHitCount++;
-
-            if (this.replacementPolicy.equals(ReplacementPolicy.LRU)){
-                block.setLastAccess(Constants.blockAccessCounter++);
-                //----------DEBUG START-----------
-                System.out.println(type.name()+ " update LRU");
-                //----------DEBUG END-----------
-            }
-            block.setDirty(true);
-            //----------DEBUG START-----------
-            System.out.println(type.name()+ " set dirty");
-            //----------DEBUG END-----------
-            return true;
-        }
-        //----------DEBUG START-----------
-        System.out.println(type.name()+ " miss");
-        //----------DEBUG END-----------
-        this.writeMissCount++;
-        return false;
-    }
-
     public EvictionProcessor getEvictionProcessor() {
         return evictionProcessor;
     }
