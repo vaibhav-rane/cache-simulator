@@ -29,7 +29,7 @@ public class L1OptEvictionProcessor implements EvictionProcessor{
                 return i;
             }
             else{
-                int occurrence = Integer.MAX_VALUE;
+                int nearestFutureOccurrence = Integer.MAX_VALUE;
 
                 for (Integer futureOccurrence : futureOccurrencesOfBlockAddress){
                     /**
@@ -37,11 +37,11 @@ public class L1OptEvictionProcessor implements EvictionProcessor{
                     if (futureOccurrence < Constants.programCounter)
                         continue;
                     else{
-                        occurrence = futureOccurrence;
+                        nearestFutureOccurrence = futureOccurrence;
                         break;
                     }
                 }
-                blockIndexFutureDistanceMap.put(i, occurrence);
+                blockIndexFutureDistanceMap.put(i, nearestFutureOccurrence);
             }
         }
 
@@ -49,10 +49,10 @@ public class L1OptEvictionProcessor implements EvictionProcessor{
         int evictionIndex = -1;
         for (Map.Entry<Integer, Integer> entry : blockIndexFutureDistanceMap.entrySet()){
             int blockIndex = entry.getKey();
-            int blockDistance = entry.getValue();
+            int nearestFutureOccurrence = entry.getValue();
 
-            if (blockDistance > farthestBlockDistance){
-                farthestBlockDistance = blockDistance;
+            if (nearestFutureOccurrence > farthestBlockDistance){
+                farthestBlockDistance = nearestFutureOccurrence;
                 evictionIndex = blockIndex;
             }
         }

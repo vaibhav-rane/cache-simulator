@@ -91,7 +91,7 @@ public class Cache {
      * -Ensures block space for the future incoming block corresponding to the supplied address.
      * -Does nothing if the space is available for the block in the target set.
      * -If the target set is full, performs eviction based on the replacement policy.
-     * -If the cache has a next level cache, issues a write-back to the next level cache.
+     * -If the cache has a next level cache and the evicted block is dirty, issues a write-back to the next level cache.
      * */
     public void ensureBlockSpace ( String address ){
         boolean spaceAvailable = isSpaceAvailableFor(address);
@@ -106,10 +106,10 @@ public class Cache {
             /**
              * Making space for the future block coming from the next memory level.
              * Preparing for Eviction*/
+            int evictionIndex = evictionProcessor.getEvictionIndex(address, this);
+
             int setIndex = CacheManagerUtils.getSetIndexFor(address, this);
             CacheBlock[] targetSet = CacheManagerUtils.getSetForSetIndex(setIndex, this);
-
-            int evictionIndex = evictionProcessor.getEvictionIndex(address, this);
 
             CacheBlock evictedBlock = targetSet[evictionIndex];
 

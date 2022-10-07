@@ -45,6 +45,7 @@ public class CacheManagerUtils {
     }
 
     public static String hexToBinary(String hexCode){
+
         String binary = new BigInteger(hexCode.toLowerCase(), 16).toString(2);
         String msbPadding = getMSBPaddingFor(binary);
         String binary32 = msbPadding + binary;

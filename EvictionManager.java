@@ -12,7 +12,7 @@ public class EvictionManager {
     public EvictionManager() {
         this.evictionProcessorMap = new HashMap<>();
         this.evictionProcessorMap.put(ReplacementPolicy.LRU, Arrays.asList(new L1LruFifoEvictionProcessor(), new L2LruFifoEvictionProcessor()));
-//        this.evictionProcessorMap.put(ReplacementPolicy.FIFO, Arrays.asList(new L1PlruEvictionProcessor()));
+        //this.evictionProcessorMap.put(ReplacementPolicy.FIFO, Arrays.asList(new L1LruFifoEvictionProcessor(), new L2LruFifoEvictionProcessor()));
         this.evictionProcessorMap.put(ReplacementPolicy.OPT, Arrays.asList(new L1OptEvictionProcessor(), new L2OptEvictorProcessor()));
     }
 
