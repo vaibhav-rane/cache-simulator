@@ -36,7 +36,13 @@ public class Cache {
         this.sets = new ArrayList<>();
     }
 
-
+    /**
+     * @apiNote Attempts to read the block corresponding to the supplied memory address in the invoking cache object.
+     * - If the block is found -> READ HIT
+     * - If the block is not found -> READ MISS
+     *      - Ensures block space for the block coming from the next memory level.
+     *      - Invoke read on the next level cache
+     *      - Allocate new block*/
     public boolean read (String address){
         //----------DEBUG START-----------
         String tag = CacheManagerUtils.getTagFor(address, this);
@@ -88,10 +94,12 @@ public class Cache {
     }
 
     /**
+     * @apiNote
      * -Ensures block space for the future incoming block corresponding to the supplied address.
      * -Does nothing if the space is available for the block in the target set.
      * -If the target set is full, performs eviction based on the replacement policy.
      * -If the cache has a next level cache and the evicted block is dirty, issues a write-back to the next level cache.
+     * -If eviction is needed, ensures cache inclusiveness in lower level cache if applicable.
      * */
     public void ensureBlockSpace ( String address ){
         boolean spaceAvailable = isSpaceAvailableFor(address);
@@ -114,7 +122,7 @@ public class Cache {
             CacheBlock evictedBlock = targetSet[evictionIndex];
 
             //----------DEBUG START-----------
-            System.out.println(type.name()+ " victim "+evictedBlock.getAddress()+" (tag "+evictedBlock.getTag()+", index "+evictionIndex+", dirty "+evictedBlock.isDirty()+")");
+            System.out.println(type.name()+ " victim "+evictedBlock.getAddress()+" (tag "+evictedBlock.getTag()+", index "+setIndex+", dirty "+evictedBlock.isDirty()+")");
             //----------DEBUG END-----------
 
             /**
@@ -124,7 +132,7 @@ public class Cache {
             /**
              * Checking if write-back to the next level is needed*/
             if ( evictedBlock.isDirty() ) {
-                writeBackV2(evictedBlock);
+                writeBackToNextLevel(evictedBlock);
             }
 
             if (this.type.equals(CacheType.L2) && this.inclusionProperty.equals(InclusiveProperty.INCLUSIVE)){
@@ -134,7 +142,11 @@ public class Cache {
     }
 
     // TODO: 10/6/22 Review after writeV2()
-    public void writeBackV2(CacheBlock evictedBlock){
+    /***
+     * @apiNote
+     * - Write-backs the evicted dirty block to the next level cache if applicable.
+     */
+    public void writeBackToNextLevel(CacheBlock evictedBlock){
         this.writeBackCount++;
         if (this.hasNextLevel()){
             Cache nextLevelCache = this.getNextLevelCache();
@@ -142,6 +154,8 @@ public class Cache {
         }
     }
 
+    /**
+     * */
     public boolean write (String address){
         //----------DEBUG START-----------
         System.out.println(type.name()+ " write : "+address+" (tag "+CacheManagerUtils.getTagFor(address, this)+", index "+CacheManagerUtils.getSetIndexFor(address, this)+")");

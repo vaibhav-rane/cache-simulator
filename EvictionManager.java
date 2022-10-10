@@ -5,6 +5,8 @@ import java.util.Map;
 
 /**
  * Created by varane on 10/1/22.
+ * @apiNote Factory that returns appropriate implementation of the eviction processor based on
+ * the given replacement policy and the cache type.
  */
 public class EvictionManager {
     private Map<ReplacementPolicy, List<EvictionProcessor>> evictionProcessorMap;
@@ -12,7 +14,7 @@ public class EvictionManager {
     public EvictionManager() {
         this.evictionProcessorMap = new HashMap<>();
         this.evictionProcessorMap.put(ReplacementPolicy.LRU, Arrays.asList(new L1LruFifoEvictionProcessor(), new L2LruFifoEvictionProcessor()));
-        //this.evictionProcessorMap.put(ReplacementPolicy.FIFO, Arrays.asList(new L1LruFifoEvictionProcessor(), new L2LruFifoEvictionProcessor()));
+        this.evictionProcessorMap.put(ReplacementPolicy.FIFO, Arrays.asList(new L1LruFifoEvictionProcessor(), new L2LruFifoEvictionProcessor()));
         this.evictionProcessorMap.put(ReplacementPolicy.OPT, Arrays.asList(new L1OptEvictionProcessor(), new L2OptEvictorProcessor()));
     }
 

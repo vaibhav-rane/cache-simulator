@@ -21,27 +21,37 @@ public class L2OptEvictorProcessor implements EvictionProcessor{
 
             /**
              * Getting all the future occurrences of this block*/
-            List<Integer> futureOccurrencesOfBlockAddress = Constants.addressOccurrenceMap.get(blockAddress);
+            List<Integer> futureAccesses = Constants.addressOccurrenceMap.get(blockAddress);
 
             /**
              * If there are no future occurrences, this block will never be needed -> ideal for eviction.*/
-            if (Objects.isNull(futureOccurrencesOfBlockAddress) || futureOccurrencesOfBlockAddress.isEmpty()){
+            if (Objects.isNull(futureAccesses) || futureAccesses.isEmpty()){
+                return i;
+            }
+
+            /**
+             * Removing the past accesses*/
+            futureAccesses.removeIf(futureAccess -> futureAccess <= Constants.programCounter);
+
+            /**
+             * If there are no future occurrences, this block will never be needed -> ideal for eviction.*/
+            if (Objects.isNull(futureAccesses) || futureAccesses.isEmpty()){
                 return i;
             }
             else{
-                int occurrence = Integer.MAX_VALUE;
+                int nearestFutureAccess = futureAccesses.get(0);
 
-                for (Integer futureOccurrence : futureOccurrencesOfBlockAddress){
-                    /**
-                     * We are only interested in the first future occurrence after the current PC*/
-                    if (futureOccurrence < Constants.programCounter)
-                        continue;
-                    else{
-                        occurrence = futureOccurrence;
-                        break;
-                    }
-                }
-                blockIndexFutureDistanceMap.put(i, occurrence);
+//                for (Integer futureOccurrence : futureAccesses){
+//                    /**
+//                     * We are only interested in the first future occurrence after the current PC*/
+//                    if (futureOccurrence < Constants.programCounter)
+//                        continue;
+//                    else{
+//                        occurrence = futureOccurrence;
+//                        break;
+//                    }
+//                }
+                blockIndexFutureDistanceMap.put(i, nearestFutureAccess);
             }
         }
 

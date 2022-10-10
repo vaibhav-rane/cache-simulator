@@ -10,20 +10,10 @@ import java.util.List;
 public class L1LruFifoEvictionProcessor implements EvictionProcessor{
     @Override
     public int getEvictionIndex(String address, Cache cache) {
-        int setIndex = CacheManagerUtils.getSetIndexFor(address, cache);
-        CacheBlock[] set = CacheManagerUtils.getSetForSetIndex(setIndex, cache);
 
         int lruBlockIndex = CacheManagerUtils.getLruBlockIndex(address, cache);
 
         return lruBlockIndex;
-//        CacheBlock evictedBlock = set.remove(lruBlockIndex);
-//
-//        if (evictedBlock.isDirty()){
-//            cache.setWriteBackCount(cache.getWriteBackCount() + 1);
-//            if(cache.hasNextLevel()){
-//                issueWriteBackTo(evictedBlock.getAddress(), cache.getNextLevelCache());
-//            }
-//        }
     }
     @Override
     public CacheType getSupportedType() {

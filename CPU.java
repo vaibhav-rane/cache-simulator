@@ -71,13 +71,14 @@ public class CPU {
      * Executes Instructions one-by-one*/
     public void run(){
         for (int i = 0; i < instructions.size(); i++){
+            Constants.programCounter = i;
             String instruction = instructions.get(i);
 
             String operation = CacheManagerUtils.getOperation(instruction);
             String address = CacheManagerUtils.getMemoryAddress(instruction);
 
             // TODO: 10/5/22 remove after testing
-            if (i == 103){
+            if (i == 150){
                 System.out.println("");
             }
 
@@ -91,7 +92,7 @@ public class CPU {
                 System.out.println("# "+(i+1)+" : write "+address);
                 L1.write(address);
             }
-            Constants.programCounter++;
+            //Constants.programCounter++;
         }
         print();
     }
