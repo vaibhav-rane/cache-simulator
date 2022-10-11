@@ -78,7 +78,7 @@ public class CPU {
             String address = CacheManagerUtils.getMemoryAddress(instruction);
 
             // TODO: 10/5/22 remove after testing
-            if (i == 150){
+            if (i == 194){
                 System.out.println("");
             }
 

@@ -141,7 +141,6 @@ public class Cache {
         }
     }
 
-    // TODO: 10/6/22 Review after writeV2()
     /***
      * @apiNote
      * - Write-backs the evicted dirty block to the next level cache if applicable.
@@ -247,24 +246,6 @@ public class Cache {
         return this.sets.get(setIndex);
     }
 
-    public void replaceBlockAtEvictionIndex(int evictionIndex, CacheBlock replacementBlock){
-        int setIndex = CacheManagerUtils.getSetIndexFor(replacementBlock.getAddress(), this);
-        CacheBlock[] set = CacheManagerUtils.getSetForSetIndex(setIndex, this);
-        CacheBlock evictedBlock = set[evictionIndex];
-        //----------DEBUG START-----------
-        System.out.println(type.name()+ " victim "+evictedBlock.getAddress()+" (tag "+evictedBlock.getTag()+", index "+evictionIndex+", dirty "+evictedBlock.isDirty()+")");
-        //----------DEBUG END-----------
-
-        set[evictionIndex] = replacementBlock;
-        //CacheBlock evictedBlock = set.set(evictionIndex, replacementBlock);
-        if (evictedBlock.isDirty()){
-            writeBack(evictedBlock);
-        }
-        if (this.type.equals(CacheType.L2) && inclusionProperty.equals(InclusiveProperty.INCLUSIVE)){
-            ensureInclusiveness(evictedBlock, prevLevelCache);
-        }
-    }
-
     public void ensureInclusiveness(CacheBlock evictedBlockFromL2, Cache L1){
         if (CacheManagerUtils.blockExistsIn(evictedBlockFromL2, L1)){
             int evictionIndex = CacheManagerUtils.getIndexOfBlockInSet(evictedBlockFromL2.getAddress(), L1);
@@ -286,40 +267,6 @@ public class Cache {
                 }
             }
         }
-    }
-
-    /**
-     * If the next level cache exists, attempts to write evicted block from this level cache to the next level cache.
-     * if there is a WRITE MISS on the next level, allocates a new block to next level and marks it dirty.
-     * */
-    public void writeBack(CacheBlock evictedBlock){
-        this.writeBackCount++;
-        if (this.hasNextLevel()){
-            Cache nextLevelCache = this.getNextLevelCache();
-            boolean writeHit = nextLevelCache.write(evictedBlock.getAddress());
-            if (! writeHit){
-                nextLevelCache.allocateBlockAndSetDirty(evictedBlock.getAddress());
-            }
-        }
-    }
-
-    public void allocateBlockAndSetDirty(String address){
-        CacheBlock block = CacheManagerUtils.createNewCacheBlockFor(this, address);
-        block.setDirty(true);
-        if (isSpaceAvailableFor(block)){
-            //----------DEBUG START-----------
-            System.out.println(type.name()+ " victim: none");
-            //----------DEBUG END-----------
-            addBlock(block);
-        }
-        else{
-            int evictionIndex = evictionProcessor.getEvictionIndex(address, this);
-            replaceBlockAtEvictionIndex(evictionIndex, block);
-            //addBlock(block);
-        }
-        //----------DEBUG START-----------
-        System.out.println(getType().name()+ " update LRU");
-        //----------DEBUG END-----------
     }
 
     public boolean isSpaceAvailableFor(CacheBlock block){
