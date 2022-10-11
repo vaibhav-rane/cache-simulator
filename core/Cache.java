@@ -1,3 +1,12 @@
+package core;
+
+import constants.Constants;
+import enums.CacheType;
+import enums.InclusiveProperty;
+import enums.ReplacementPolicy;
+import evictionprocessors.EvictionProcessor;
+import utils.CacheManagerUtils;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -157,7 +166,7 @@ public class Cache {
      * */
     public boolean write (String address){
         //----------DEBUG START-----------
-        System.out.println(type.name()+ " write : "+address+" (tag "+CacheManagerUtils.getTagFor(address, this)+", index "+CacheManagerUtils.getSetIndexFor(address, this)+")");
+        System.out.println(type.name()+ " write : "+address+" (tag "+ CacheManagerUtils.getTagFor(address, this)+", index "+ CacheManagerUtils.getSetIndexFor(address, this)+")");
         //----------DEBUG END-----------
 
         this.writeCount++;

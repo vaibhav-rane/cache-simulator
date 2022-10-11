@@ -1,8 +1,16 @@
+package core;
+
+import enums.CacheType;
+import enums.InclusiveProperty;
+import enums.ReplacementPolicy;
+import evictionprocessors.EvictionManager;
+
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Created by varane on 10/1/22.
+ * A builder class that builds core.Cache objects.
  */
 public class CacheBuilder {
     private Cache cache;
@@ -73,10 +81,15 @@ public class CacheBuilder {
             };
             this.cache.setSets(sets);
 
-            if (this.cache.getReplacementPolicy().equals(ReplacementPolicy.LRU) || this.cache.getReplacementPolicy().equals(ReplacementPolicy.FIFO))
+            if (this.cache.getReplacementPolicy().equals(ReplacementPolicy.LRU)){
                 this.cache.setEvictionProcessor(evictionManager.getEvictionProcessorFor(ReplacementPolicy.LRU, this.cache.getType()));
-            else
+            }
+            else if (this.cache.getReplacementPolicy().equals(ReplacementPolicy.FIFO)){
+                this.cache.setEvictionProcessor(evictionManager.getEvictionProcessorFor(ReplacementPolicy.FIFO, this.cache.getType()));
+            }
+            else{
                 this.cache.setEvictionProcessor(evictionManager.getEvictionProcessorFor(ReplacementPolicy.OPT, this.cache.getType()));
+            }
         }
         return this.cache;
     }

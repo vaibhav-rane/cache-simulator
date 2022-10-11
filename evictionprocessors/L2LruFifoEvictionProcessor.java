@@ -1,9 +1,13 @@
-import java.util.List;
+package evictionprocessors;
+
+import core.Cache;
+import enums.CacheType;
+import utils.CacheManagerUtils;
 
 /**
  * Created by varane on 10/2/22.
  */
-public class L2LruFifoEvictionProcessor implements EvictionProcessor{
+public class L2LruFifoEvictionProcessor implements EvictionProcessor {
     @Override
     public int getEvictionIndex(String address, Cache cache) {
         int lruBlockIndex = CacheManagerUtils.getLruBlockIndex(address, cache);

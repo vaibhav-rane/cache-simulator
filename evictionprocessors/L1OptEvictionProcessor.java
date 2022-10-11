@@ -1,10 +1,26 @@
+package evictionprocessors;
+
+import constants.Constants;
+import core.Cache;
+import core.CacheBlock;
+import enums.CacheType;
+import evictionprocessors.EvictionProcessor;
+import utils.CacheManagerUtils;
+
 import java.util.List;
 import java.util.Objects;
 
 /**
  * Created by varane on 10/1/22.
+ * Handles eviction in L1 core.Cache using Optimal Replacement Policy
  */
-public class L1OptEvictionProcessor implements EvictionProcessor{
+public class L1OptEvictionProcessor implements EvictionProcessor {
+
+    /**
+     * @apiNote Returns the index of a block to be evicted from the cache based on the Optimal replacement policy
+     * - Identifies the target set
+     * - identifies the block to evict based on the future accesses of each blocks in the target set.
+     * - Returns the index of the block that is needed farthest in the future or not needed at all*/
     @Override
     public int getEvictionIndex(String address, Cache cache) {
         int setIndex = CacheManagerUtils.getSetIndexFor(address, cache);
@@ -41,22 +57,8 @@ public class L1OptEvictionProcessor implements EvictionProcessor{
                     farthestAccess = nearestFutureAccess;
                     evictionIndex = i;
                 }
-//                blockFutureAccessMap.put(i, nearestFutureAccess);
             }
         }
-
-//        int farthestFutureAccess = Integer.MIN_VALUE;
-//        int evictionIndex = -1;
-//
-//        for (Map.Entry<Integer, Integer> entry : blockFutureAccessMap.entrySet()){
-//            int blockIndex = entry.getKey();
-//            int nearestFutureAccess = entry.getValue();
-//
-//            if (nearestFutureAccess > farthestFutureAccess){
-//                farthestFutureAccess = nearestFutureAccess;
-//                evictionIndex = blockIndex;
-//            }
-//        }
         return evictionIndex;
     }
     @Override

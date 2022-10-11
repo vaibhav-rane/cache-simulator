@@ -1,3 +1,7 @@
+import core.CPU;
+import core.Cache;
+import core.CacheBuilder;
+import enums.CacheType;
 
 /**
  * @author Vaibhav R.

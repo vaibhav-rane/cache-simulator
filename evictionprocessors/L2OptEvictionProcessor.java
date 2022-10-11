@@ -1,4 +1,12 @@
-import java.util.ArrayList;
+package evictionprocessors;
+
+import constants.Constants;
+import core.Cache;
+import core.CacheBlock;
+import enums.CacheType;
+import evictionprocessors.EvictionProcessor;
+import utils.CacheManagerUtils;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -6,8 +14,15 @@ import java.util.Objects;
 
 /**
  * Created by varane on 10/4/22.
+ * Handles eviction in L2 core.Cache using Optimal Replacement Policy
  */
-public class L2OptEvictorProcessor implements EvictionProcessor{
+public class L2OptEvictionProcessor implements EvictionProcessor {
+
+    /**
+     * @apiNote Returns the index of a block to be evicted from the cache based on the Optimal replacement policy
+     * - Identifies the target set
+     * - identifies the block to evict based on the future accesses of each blocks in the target set.
+     * - Returns the index of the block that is needed farthest in the future or not needed at all*/
     @Override
     public int getEvictionIndex(String address, Cache cache) {
         int setIndex = CacheManagerUtils.getSetIndexFor(address, cache);
@@ -40,17 +55,6 @@ public class L2OptEvictorProcessor implements EvictionProcessor{
             }
             else{
                 int nearestFutureAccess = futureAccesses.get(0);
-
-//                for (Integer futureOccurrence : futureAccesses){
-//                    /**
-//                     * We are only interested in the first future occurrence after the current PC*/
-//                    if (futureOccurrence < Constants.programCounter)
-//                        continue;
-//                    else{
-//                        occurrence = futureOccurrence;
-//                        break;
-//                    }
-//                }
                 blockIndexFutureDistanceMap.put(i, nearestFutureAccess);
             }
         }

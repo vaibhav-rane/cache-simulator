@@ -1,3 +1,9 @@
+package core;
+
+import constants.Constants;
+import core.Cache;
+import utils.CacheManagerUtils;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -8,6 +14,7 @@ import java.util.Objects;
 
 /**
  * Created by varane on 10/2/22.
+ * Models a real-life CPU with access to L1 and L2 caches.
  */
 public class CPU {
     private String traceFile;
@@ -15,6 +22,7 @@ public class CPU {
     private Cache L1;
     private Cache L2;
     int trafficCounter = 0;
+    public int supportedBlockSize;
     private static final String READ = "r";
 
     public void setTraceFile(String traceFile) {
@@ -23,12 +31,17 @@ public class CPU {
     public void setL1(Cache l1) {
         L1 = l1;
     }
-
     public void setL2(Cache l2) {
         L2 = l2;
     }
 
+    /**
+     * @apiNote Prepares the resources needed to begin the simulation.
+     * - Establishes relationships between the caches.
+     * - Reads instructions from the supplied trace file and keeps them ready in an instruction array.
+     * - Initializes future accesses map for OPT replacement policy*/
     public void boot(){
+        supportedBlockSize = L1.getBlockSize();
 
         if(L2.getSize() > 0){
             L1.setNextLevelCache(L2);
@@ -39,7 +52,7 @@ public class CPU {
          * Reading instructions from trace file*/
         this.instructions = new ArrayList<>();
         try {
-            BufferedReader br = new BufferedReader(new FileReader(new File(traceFile)));
+            BufferedReader br = new BufferedReader(new FileReader(new File("./traces/"+traceFile)));
             String instruction;
             while ((instruction = br.readLine()) != null) {
                 if(instruction.isEmpty() || instruction.length() < 4) continue;
@@ -50,37 +63,39 @@ public class CPU {
             e.printStackTrace();
         }
 
-        Constants.preprocessedOPTTrace = new ArrayList<>(instructions);
-
         /**
-         * Preparing Map for OPT*/
+         * Preparing Future Access Map for OPT
+         * Key -> Address
+         * Value -> List<Integer> i.e. list of all the address occurrences*/
         Constants.addressOccurrenceMap = new HashMap<>();
+
         int i = 0;
         for (String instruction : instructions){
-            String address = CacheManagerUtils.getMemoryAddress(instruction);
+
+            String address = CacheManagerUtils.getAddressAfterExcludingBlockOffset(instruction, supportedBlockSize);
             List<Integer> occurrences = Constants.addressOccurrenceMap.get(address);
+
             if (Objects.isNull(occurrences)){
                 occurrences = new ArrayList<>();
                 Constants.addressOccurrenceMap.put(address, occurrences);
             }
+
             occurrences.add(i++);
         }
     }
 
+
     /**
+     * @apiNote Starts the cache simulation
      * Executes Instructions one-by-one*/
     public void run(){
         for (int i = 0; i < instructions.size(); i++){
+
             Constants.programCounter = i;
             String instruction = instructions.get(i);
 
             String operation = CacheManagerUtils.getOperation(instruction);
-            String address = CacheManagerUtils.getMemoryAddress(instruction);
-
-            // TODO: 10/5/22 remove after testing
-            if (i == 194){
-                System.out.println("");
-            }
+            String address = CacheManagerUtils.getAddressAfterExcludingBlockOffset(instruction, supportedBlockSize);
 
             System.out.println("----------------------------------------");
 
@@ -92,11 +107,13 @@ public class CPU {
                 System.out.println("# "+(i+1)+" : write "+address);
                 L1.write(address);
             }
-            //Constants.programCounter++;
         }
         print();
     }
 
+    /**
+     * @apiNote Prints the summary of the cache simulation after the core.CPU is done executing all the instructions
+     * */
     public void print(){
         double l1MissRate = 0.0;
         double l2MissRate = 0.0;
@@ -139,9 +156,11 @@ public class CPU {
         System.out.println("l. number of L2 writebacks:   "	+	L2.getWriteBackCount());
 
         int traffic = (L1.getReadMissCount() + L1.getWriteMissCount() + L1.getWriteBackCount());
+
         if (L2.getSize() !=0) {
             traffic =   L2.getReadMissCount() + L2.getWriteMissCount() + L2.getWriteBackCount() + trafficCounter;
         }
+
         System.out.println("m. total memory traffic:      "	+	traffic);
     }
 }
