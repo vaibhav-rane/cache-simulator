@@ -1,5 +1,7 @@
+package enums;
+
 /**
- * @author varane
+ * @author Vaibhav R.
  * @created 09/25/2022
  */
 public enum CacheType {
