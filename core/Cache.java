@@ -16,7 +16,6 @@ import java.util.StringJoiner;
  * @author Vaibhav R.
  * @created 09/25/2022
  */
-
 public class Cache {
     private CacheType type;
     private int blockSize;
@@ -36,7 +35,6 @@ public class Cache {
     private String traceFile;
     private List<String> instructions;
     private List<CacheBlock[]> sets;
-    private List<String> opt;
     private Cache prevLevelCache;
     private Cache nextLevelCache;
 
@@ -53,39 +51,21 @@ public class Cache {
      *      - Invoke read on the next level cache
      *      - Allocate new block*/
     public boolean read (String address){
-        //----------DEBUG START-----------
-        String tag = CacheManagerUtils.getTagFor(address, this);
-        int setIndex = CacheManagerUtils.getSetIndexFor(address, this);
-        System.out.println(type.name()+" read : "+address+" (tag "+tag+", index "+setIndex+")");
-        //----------DEBUG END-----------
-
         this.readCount++;
         CacheBlock block = getBlock(address);
         if (Objects.nonNull(block)){
-            // READ HIT
-
-            //----------DEBUG START-----------
-            System.out.println(type.name()+" hit");
-            //----------DEBUG END-----------
-
+            /**
+             * READ HIT*/
             readHitCount++;
 
             if (this.replacementPolicy.equals(ReplacementPolicy.LRU)){
-                //----------DEBUG START-----------
-                System.out.println(type.name()+" update LRU");
-                //----------DEBUG END-----------
-
                 block.setLastAccess(Constants.blockAccessCounter++);
             }
             return true;
         }
         else {
-            //READ MISS
-
-            //----------DEBUG START-----------
-            System.out.println(type.name()+" miss");
-            //----------DEBUG END-----------
-
+            /**
+             * READ MISS*/
             readMissCount++;
 
             /**
@@ -97,7 +77,7 @@ public class Cache {
             }
 
             CacheBlock blockFromNextLevel = CacheManagerUtils.createNewCacheBlockFor(this, address);
-            allocateBlockV2(blockFromNextLevel);
+            allocateBlock(blockFromNextLevel);
         }
         return false;
     }
@@ -113,13 +93,7 @@ public class Cache {
     public void ensureBlockSpace ( String address ){
         boolean spaceAvailable = isSpaceAvailableFor(address);
 
-        if (spaceAvailable) {
-            //----------DEBUG START-----------
-            System.out.println(type.name()+ " victim: none");
-            //----------DEBUG END-----------
-            return;
-        }
-        else {
+        if (! spaceAvailable) {
             /**
              * Making space for the future block coming from the next memory level.
              * Preparing for Eviction*/
@@ -129,10 +103,6 @@ public class Cache {
             CacheBlock[] targetSet = CacheManagerUtils.getSetForSetIndex(setIndex, this);
 
             CacheBlock evictedBlock = targetSet[evictionIndex];
-
-            //----------DEBUG START-----------
-            System.out.println(type.name()+ " victim "+evictedBlock.getAddress()+" (tag "+evictedBlock.getTag()+", index "+setIndex+", dirty "+evictedBlock.isDirty()+")");
-            //----------DEBUG END-----------
 
             /**
              * Eviction completed*/
@@ -165,70 +135,46 @@ public class Cache {
     /**
      * */
     public boolean write (String address){
-        //----------DEBUG START-----------
-        System.out.println(type.name()+ " write : "+address+" (tag "+ CacheManagerUtils.getTagFor(address, this)+", index "+ CacheManagerUtils.getSetIndexFor(address, this)+")");
-        //----------DEBUG END-----------
-
         this.writeCount++;
 
         CacheBlock block = getBlock(address);
 
         if (Objects.nonNull(block)){
-            //----------DEBUG START-----------
-            System.out.println(type.name()+ " hit");
-            //----------DEBUG END-----------
-
             /**
              * WRITE HIT*/
             this.writeHitCount++;
 
             if (this.replacementPolicy.equals(ReplacementPolicy.LRU)){
                 block.setLastAccess(Constants.blockAccessCounter++);
-
-                //----------DEBUG START-----------
-                System.out.println(type.name()+ " update LRU");
-                //----------DEBUG END-----------
             }
 
             block.setDirty(true);
-
-            //----------DEBUG START-----------
-            System.out.println(type.name()+ " set dirty");
-            //----------DEBUG END-----------
-
             return true;
         }
         else {
-            //WRITE MISS
-            //----------DEBUG START-----------
-            System.out.println(type.name()+ " miss");
-            //----------DEBUG END-----------
-
+            /**
+             * WRITE MISS*/
             this.writeMissCount++;
 
             /**
              * Ensuring free space for the block coming from the next memory level*/
             ensureBlockSpace(address);
 
-            if (hasNextLevel()){
+            if (this.hasNextLevel()){
                 nextLevelCache.read(address);
             }
             CacheBlock cacheBlockFromNextLevel = CacheManagerUtils.createNewCacheBlockFor(this, address);
 
-            //----------DEBUG START-----------
-            System.out.println(type.name()+ " set dirty");
-            //----------DEBUG END-----------
-
             cacheBlockFromNextLevel.setDirty(true);
 
-            allocateBlockV2(cacheBlockFromNextLevel);
+            allocateBlock(cacheBlockFromNextLevel);
         }
         return false;
     }
 
     /**
      * Adds the supplied block to the first available index in the appropriate set of the invoking cache.*/
-    public void allocateBlockV2(CacheBlock block){
+    public void allocateBlock(CacheBlock block){
         int setIndex = CacheManagerUtils.getSetIndexFor(block.getAddress(), this);
         CacheBlock[] targetSet = CacheManagerUtils.getSetForSetIndex(setIndex, this);
         for (int i = 0; i < targetSet.length; i++) {
@@ -260,14 +206,9 @@ public class Cache {
             int evictionIndex = CacheManagerUtils.getIndexOfBlockInSet(evictedBlockFromL2.getAddress(), L1);
 
             if (evictionIndex != -1){
-                // TODO: 10/5/22 Recheck on failure
                 int setIndex = CacheManagerUtils.getSetIndexFor(evictedBlockFromL2.getAddress(), L1);
                 CacheBlock[] set = CacheManagerUtils.getSetForSetIndex(setIndex, L1);
                 CacheBlock evictedBlock = set[evictionIndex];
-
-                //----------DEBUG START-----------
-                System.out.println(type.name()+ " victim "+evictedBlock.getAddress()+" (tag "+evictedBlock.getTag()+", index "+evictionIndex+", dirty "+evictedBlock.isDirty()+")");
-                //----------DEBUG END-----------
 
                 set[evictionIndex] = null;
 
@@ -278,6 +219,7 @@ public class Cache {
         }
     }
 
+    @Deprecated
     public boolean isSpaceAvailableFor(CacheBlock block){
         int index = CacheManagerUtils.getSetIndexFor(block.getAddress(), this);
         CacheBlock[] set = getSetAt(index);
@@ -296,22 +238,6 @@ public class Cache {
                 return true;
         }
         return false;
-    }
-
-    /**
-     * Use isSpaceAvailableFor before invoking this*/
-    public void addBlock(CacheBlock block){
-        int setIndex = CacheManagerUtils.getSetIndexFor(block.getAddress(), this);
-        CacheBlock[] set = getSetAt(setIndex);
-        /**
-         * find first null block and allocate there*/
-        for (int i = 0; i < set.length; i++){
-            CacheBlock cb = set[i];
-            if (Objects.isNull(cb)){
-                set[i] = block;
-                break;
-            }
-        }
     }
     public EvictionProcessor getEvictionProcessor() {
         return evictionProcessor;
@@ -481,14 +407,6 @@ public class Cache {
         this.sets = sets;
     }
 
-    public List<String> getOpt() {
-        return opt;
-    }
-
-    public void setOpt(List<String> opt) {
-        this.opt = opt;
-    }
-
     public boolean hasNextLevel(){
         return this.getNextLevelCache() != null;
     }
@@ -512,7 +430,6 @@ public class Cache {
                 .add("writeMissCount=" + writeMissCount)
                 .add("writeBackCount=" + writeBackCount)
                 .add("traceFile='" + traceFile + "'")
-                .add("opt=" + opt)
                 .toString();
     }
 }

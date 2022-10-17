@@ -8,7 +8,7 @@ import java.math.BigInteger;
 import java.util.Objects;
 
 /**
- * @author varane
+ * @author Vaibhav R.
  * @created 09/25/2022
  * Utility class to perform frequent cache operations
  */
@@ -98,7 +98,8 @@ public class CacheManagerUtils {
             CacheBlock[] set = cache.getSets().get(i);
 
             for(int j = 0; j < set.length ; j++) {
-                System.out.print( set[j].getTag() + " " + ( set[j].isDirty() ? "D" : "" ) + " ");
+                if (set[j] != null)
+                    System.out.print( set[j].getTag() + " " + ( set[j].isDirty() ? "D" : "" ) + " ");
             }
             System.out.println();
         }
@@ -226,7 +227,6 @@ public class CacheManagerUtils {
         int setIndex = CacheManagerUtils.getSetIndexFor(address, cache);
         CacheBlock[] set = CacheManagerUtils.getSetForSetIndex(setIndex, cache);
 
-        //core.CacheBlock inclusiveBlock = utils.CacheManagerUtils.getBlockAt(address, cache);
         String tag = getTagFor(address, cache);
         int index = -1;
 

@@ -1,14 +1,13 @@
-package evictionprocessors; /**
- * Created by varane on 10/2/22.
- */
+package evictionprocessors;
 
 import core.Cache;
 import enums.CacheType;
-import evictionprocessors.EvictionProcessor;
 import utils.CacheManagerUtils;
 
 /**
- * Uses LRU policy to evict a block corresponding to the supplied address from L1 cache
+ * @author Vaibhav R.
+ * @created 09/25/2022
+ * Handles eviction in L1 Cache using LRU/FIFO Replacement Policy
  * If the evicted block is dirty, issues write-back to L2*/
 public class L1LruFifoEvictionProcessor implements EvictionProcessor {
     @Override

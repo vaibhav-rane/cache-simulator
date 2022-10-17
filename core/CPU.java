@@ -13,7 +13,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Created by varane on 10/2/22.
+ * @author Vaibhav R.
+ * @created 09/25/2022
  * Models a real-life CPU with access to L1 and L2 caches.
  */
 public class CPU {
@@ -97,14 +98,10 @@ public class CPU {
             String operation = CacheManagerUtils.getOperation(instruction);
             String address = CacheManagerUtils.getAddressAfterExcludingBlockOffset(instruction, supportedBlockSize);
 
-            System.out.println("----------------------------------------");
-
             if (operation.equals(READ)){
-                System.out.println("# "+(i+1)+" : read "+address);
                 L1.read(address);
             }
             else{
-                System.out.println("# "+(i+1)+" : write "+address);
                 L1.write(address);
             }
         }

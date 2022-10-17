@@ -16,4 +16,4 @@ sim_cache:
 
 # type "make clean" to remove all your .class files
 clean:
-	-rm *.class
+	-rm ./*/*.class

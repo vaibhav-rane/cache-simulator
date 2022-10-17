@@ -11,8 +11,9 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Created by varane on 10/1/22.
- * Handles eviction in L1 core.Cache using Optimal Replacement Policy
+ * @author Vaibhav R.
+ * @created 09/25/2022
+ * Handles eviction in L1 Cache using Optimal Replacement Policy
  */
 public class L1OptEvictionProcessor implements EvictionProcessor {
 

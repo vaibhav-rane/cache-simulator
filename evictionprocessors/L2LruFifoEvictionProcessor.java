@@ -5,7 +5,9 @@ import enums.CacheType;
 import utils.CacheManagerUtils;
 
 /**
- * Created by varane on 10/2/22.
+ * @author Vaibhav R.
+ * @created 09/25/2022
+ * Handles eviction in L2 Cache using LRU/FIFO Replacement Policy
  */
 public class L2LruFifoEvictionProcessor implements EvictionProcessor {
     @Override
