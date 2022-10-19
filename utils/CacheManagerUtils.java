@@ -55,8 +55,8 @@ public class CacheManagerUtils {
             address = hexToBinary(address);
             int lower = getTagSize(cache);
             int higher = getIndexBitsCountFor(cache);
-            String index_bits = address.substring(lower,lower+higher);
-            int index = Integer.parseInt(index_bits,2);
+            String indexBinary = address.substring(lower,lower+higher);
+            int index = Integer.parseInt(indexBinary,2);
             return index;
         }catch(Exception e) {
             return 0;

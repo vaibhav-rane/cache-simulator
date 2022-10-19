@@ -5,7 +5,7 @@ Steps to execute the simulation
 ## 0. Requirements
 
 The simulator is implemented with Java 8. Install [JDK](https://www.oracle.com/java/technologies/downloads/) to install java runtime environment.
-
+All the tracefiles are located under traces package.
 
 ## 1. Clean the compiled code
 
